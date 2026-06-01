@@ -1,59 +1,53 @@
-# Vuls Architecture and Product Specification
+# Vuls Architecture and Product Specification v1.0
 
 Дата: 2026-06-01
-Статус: Draft for review
+Статус: Final Architecture v1.0
 Владелец продукта: Vuls
 
 ## 1. Vision
 
-Vuls - AI Product Builder, который принимает идею пользователя через Telegram и превращает ее в полноценный программный продукт через цепочку специализированных агентов. Цель продукта - дать пользователю опыт уровня Base44, Lovable, Bolt и Replit Agent, но с Telegram-first интерфейсом, модульной архитектурой и возможностью заменять ключевые компоненты без переписывания всей системы.
+Vuls - AI Product Builder, который принимает идею пользователя через Telegram и превращает ее в полноценный программный продукт через последовательный, проверяемый конвейер. Цель продукта - дать пользователю опыт уровня Base44, Lovable, Bolt и Replit Agent, но с Telegram-first интерфейсом, быстрым стартом, памятью проекта, шаблонами продуктов и возможностью заменять ключевые компоненты без переписывания всей системы.
 
 Главный принцип Vuls: одна большая пользовательская идея не запускает сразу множество несвязанных процессов. Система последовательно проходит этапы анализа, планирования, архитектуры, UX/UI, базы данных, backend, frontend, тестирования, исправления ошибок и деплоя. Каждый этап должен иметь входные данные, выходные артефакты, критерии завершения и проверку качества.
 
 Vuls не должен быть просто "ботом, который генерирует код". Это продуктовый конвейер:
 
-- Telegram принимает намерение пользователя.
-- Orchestrator нормализует запрос и создает рабочую сессию.
-- Hermes Agent планирует работу и контролирует этапы.
-- Open Design генерирует UI/UX и дизайн-артефакты.
-- OpenAI API или другой LLM слой генерирует, объясняет и исправляет код.
-- Supabase хранит пользователей, проекты, артефакты, задачи и историю.
+- Telegram принимает намерение пользователя и возвращает результат.
+- Supabase хранит пользователей, проекты, память, артефакты, задачи и историю.
+- OpenAI API или другой LLM слой анализирует идею, выбирает шаблон, генерирует код и объясняет результат.
 - GitHub хранит сгенерированные проекты пользователей.
-- Sandbox и Code Interpreter безопасно запускают и проверяют код.
-- Playwright проверяет веб-приложения в браузере.
-- ESLint и Prettier обеспечивают базовое качество frontend-кода.
-- Docker и Deployment Layer поднимают проекты в воспроизводимой среде.
+- Template System ускоряет создание типовых продуктов.
+- ZIP Export или GitHub Repo является результатом MVP v1.0.
+- Hermes Agent, Open Design, Sandbox Pool, Playwright и Deployment Layer остаются опциональными адаптерами после MVP, а не фундаментальными зависимостями v1.0.
 
 ## 2. Product Requirements
 
-### 2.1 Primary User Journey
+### 2.1 Primary User Journey v1.0
 
 1. Пользователь пишет в Telegram: "Создай CRM для маленькой кофейни".
 2. Vuls создает проектную сессию и уточняет только критически важные требования.
-3. Hermes Agent формирует последовательный план этапов.
-4. Vuls проектирует архитектуру и UX/UI до генерации кода.
-5. Open Design создает UI/UX спецификацию и, при необходимости, визуальные артефакты.
-6. LLM Layer генерирует код по утвержденной архитектуре.
-7. Sandbox запускает код в изолированной среде.
-8. Code Interpreter и тестовые воркеры проверяют код.
-9. Playwright проверяет frontend-сценарии.
-10. ESLint и Prettier приводят код к стандарту.
-11. GitHub Integration сохраняет проект пользователя в репозиторий.
-12. Deployment Layer подготавливает preview/deploy и возвращает ссылку или ZIP.
+3. Vuls выбирает подходящий шаблон: CRM, SaaS, Marketplace, AI Agent или Dashboard.
+4. LLM Layer формирует короткий план и генерирует проект по шаблону.
+5. Vuls сохраняет проект, память и артефакты в Supabase.
+6. GitHub Integration создает репозиторий или Vuls формирует ZIP.
+7. Пользователь получает ссылку на GitHub Repo или ZIP-файл в Telegram.
+8. В следующей сессии Vuls продолжает проект с учетом User Memory, Project Memory и Conversation Memory.
 
 ### 2.2 Functional Requirements
 
 - Telegram Bot API должен быть основным пользовательским интерфейсом MVP.
 - Supabase должен быть основной базой данных и источником состояния продукта.
 - OpenAI API или другой LLM должен быть заменяемым "мозгом" системы.
-- Hermes Agent должен отвечать за агентное планирование задач.
-- Open Design должен отвечать за генерацию UI/UX и дизайн-решений.
+- Hermes Agent должен быть опциональным адаптером для агентного планирования после MVP v1.0.
+- Open Design должен быть опциональным адаптером для UI/UX генерации после MVP v1.0.
 - GitHub должен хранить проекты пользователей и историю версий.
-- Docker должен обеспечивать воспроизводимый запуск пользовательских проектов.
-- Sandbox должен изолировать выполнение недоверенного пользовательского кода.
-- Code Interpreter должен запускать быстрые проверки, тесты и анализ ошибок.
-- Playwright должен автоматически проверять веб-интерфейсы.
-- ESLint и Prettier должны быть частью стандартного качества для JS/TS проектов.
+- Docker должен быть подготовлен как стандарт воспроизводимого запуска, но не блокировать MVP v1.0.
+- Sandbox должен быть архитектурно предусмотрен, но не входить в обязательный v1.0 flow.
+- Code Interpreter должен быть архитектурно предусмотрен, но не входить в обязательный v1.0 flow.
+- Playwright должен быть архитектурно предусмотрен, но не входить в обязательный v1.0 flow.
+- ESLint и Prettier должны быть частью стандартного качества для JS/TS шаблонов.
+- Template System должен ускорять генерацию продуктов и снижать стоимость LLM вызовов.
+- Memory Layer должен позволять пользователю продолжать проект через дни и недели.
 - i18n должен быть встроен с первого дня.
 - Все модули должны иметь адаптеры и быть заменяемыми.
 
@@ -67,7 +61,121 @@ Vuls не должен быть просто "ботом, который ген�
 - Cost awareness: LLM вызовы должны иметь лимиты, бюджет и журнал токенов.
 - Replaceability: OpenAI можно заменить на Anthropic/OpenRouter/local LLM; GitHub - на GitLab; Supabase - на другой Postgres-совместимый слой.
 
-## 3. Recommended Architecture Approach
+## 3. Business Model
+
+### 3.1 Unique Value Proposition
+
+Vuls отличается от Base44, Lovable, Bolt и Replit Agent тем, что начинается не с тяжелого веб-интерфейса, а с Telegram. Пользователь не должен открывать dashboard, изучать canvas или выбирать стек. Он пишет идею в привычный чат, получает уточнения, затем получает готовый репозиторий или ZIP.
+
+Ключевое УТП:
+
+- "Product builder inside Telegram": идея превращается в проект прямо из чата.
+- "Memory-first": Vuls помнит пользователя, проекты, решения и продолжает работу позже.
+- "Template-first": типовые продукты создаются быстрее и дешевле, чем чистая генерация с нуля.
+- "Repo-first ownership": результат сразу сохраняется в GitHub, а не заперт внутри платформы.
+- "Modular AI stack": OpenAI, Hermes, Open Design, GitHub и deployment-провайдеры заменяемы.
+
+### 3.2 Why Telegram Is Better for the First Interface
+
+Telegram лучше веб-интерфейса для v1.0, потому что:
+
+- у пользователя уже есть привычный интерфейс и уведомления;
+- идея продукта часто рождается в короткой переписке, а не в сложном редакторе;
+- бот может задавать вопросы по одному и не перегружать пользователя;
+- Telegram хорошо подходит для статусов долгих задач;
+- файлы, ZIP, ссылки на репозитории и скриншоты удобно отправлять прямо в чат.
+
+Ограничение: Telegram слаб для визуального редактирования сложных интерфейсов. Поэтому web dashboard и Open Design UI остаются roadmap-функциями, а не обязательным MVP.
+
+### 3.3 Differentiation from Base44
+
+| Area | Base44-like tools | Vuls v1.0 |
+| --- | --- | --- |
+| Entry point | Web app/editor | Telegram chat |
+| Output ownership | Often platform-centric | ZIP or GitHub Repo from MVP |
+| Memory | Product/session-specific | User, project, conversation and knowledge memory |
+| Speed | General generation | Template-first generation |
+| Extensibility | Platform-defined | Adapter-based architecture |
+| Best first user | Web builder users | Telegram-native founders, creators, agencies |
+
+### 3.4 Monetization
+
+Initial monetization should be simple and tied to generated value:
+
+- Free tier: limited projects per month, ZIP export, basic templates.
+- Pro tier: more projects, GitHub repo export, higher LLM budget, project memory retention.
+- Team tier: shared projects, GitHub organization integration, collaboration and audit logs.
+- Agency tier: higher quotas, white-label templates, priority generation, custom template packs.
+
+Usage-based costs should track:
+
+- LLM tokens;
+- number of generated projects;
+- GitHub operations;
+- artifact storage;
+- future sandbox/test/deploy runtime.
+
+MVP v1.0 does not need billing implementation, but the data model should store enough usage events to add billing later.
+
+## 4. MVP Scope v1.0
+
+### 4.1 In Scope
+
+MVP v1.0 must prove the shortest valuable product loop:
+
+```mermaid
+flowchart LR
+  User["Telegram User"] --> Bot["Telegram Bot"]
+  Bot --> Supabase["Supabase"]
+  Bot --> LLM["OpenAI / LLM"]
+  LLM --> Templates["Template System"]
+  Templates --> Generator["Project Generator"]
+  Generator --> GitHub["GitHub Repo"]
+  Generator --> Zip["ZIP Export"]
+  GitHub --> Bot
+  Zip --> Bot
+```
+
+Required v1.0 capabilities:
+
+- Telegram bot intake and status messages.
+- Supabase users, projects, memory and artifacts.
+- OpenAI/LLM project generation.
+- Template selection and template-based generation.
+- GitHub repository creation or ZIP export.
+- Basic project files for selected template.
+- Basic i18n scaffolding in generated UI projects.
+- ESLint and Prettier configs for JS/TS templates.
+- Minimal audit and usage logging.
+
+### 4.2 Explicitly Out of Scope for v1.0
+
+These are important, but not required for the first release:
+
+- Open Design integration.
+- Hermes Agent integration.
+- 10-agent execution system.
+- Playwright browser automation.
+- Sandbox runner pool.
+- Code Interpreter execution.
+- automatic deployment/preview hosting.
+- Kubernetes production scaling.
+- web dashboard.
+- billing UI.
+
+### 4.3 v1.0 Success Criteria
+
+Vuls v1.0 is successful when:
+
+- a user can send one product idea in Telegram;
+- Vuls can ask up to three focused clarification questions;
+- Vuls selects a template;
+- Vuls generates a runnable project skeleton;
+- Vuls saves project state and memory in Supabase;
+- Vuls returns ZIP or GitHub Repo;
+- the user can come back later and continue the same project with preserved context.
+
+## 5. Recommended Architecture Approach
 
 ### Approach A - Modular Monolith with Workers (Recommended)
 
@@ -117,7 +225,7 @@ Telegram является тонкой оболочкой над локальн�
 
 Решение: начать с Approach A. Архитектура должна быть модульной, но без преждевременного разбиения на множество production-сервисов.
 
-## 4. System Architecture
+## 6. System Architecture
 
 ```mermaid
 flowchart LR
@@ -125,30 +233,34 @@ flowchart LR
   Telegram --> Bot["Bot Gateway"]
   Bot --> Orchestrator["Vuls Orchestrator"]
   Orchestrator --> Workflow["Workflow Engine"]
-  Workflow --> Hermes["Hermes Agent Adapter"]
-  Workflow --> Design["Open Design Adapter"]
+  Workflow -.-> Hermes["Hermes Agent Adapter (optional)"]
+  Workflow -.-> Design["Open Design Adapter (optional)"]
   Workflow --> LLM["LLM Gateway"]
+  Workflow --> Memory["Memory Layer"]
+  Workflow --> Templates["Template System"]
   Workflow --> CodeGen["Code Generation Pipeline"]
-  CodeGen --> Sandbox["Sandbox Execution"]
-  Sandbox --> Interpreter["Code Interpreter"]
-  Sandbox --> Browser["Playwright Browser Automation"]
+  CodeGen -.-> Sandbox["Sandbox Execution (post-v1)"]
+  Sandbox -.-> Interpreter["Code Interpreter (post-v1)"]
+  Sandbox -.-> Browser["Playwright Browser Automation (post-v1)"]
   CodeGen --> Quality["ESLint + Prettier + Tests"]
   Workflow --> GitHub["GitHub Integration"]
-  Workflow --> Deploy["Deployment Layer"]
+  Workflow -.-> Deploy["Deployment Layer (post-v1)"]
   Orchestrator --> Supabase["Supabase Postgres/Auth/Storage"]
   Deploy --> Preview["Preview URL / ZIP / Repo"]
   Preview --> Telegram
 ```
 
-### 4.1 Core Modules
+### 6.1 Core Modules
 
 | Module | Responsibility | Replaceable By |
 | --- | --- | --- |
 | Bot Gateway | Telegram update intake, commands, message routing | Web UI, Slack, Discord |
 | Orchestrator | Owns sessions, state machine, task lifecycle | Temporal, Durable Objects, custom workflow engine |
 | Workflow Engine | Runs Vuls stages sequentially | BullMQ, Celery, Hatchet, Temporal |
-| Hermes Adapter | Agent planning and task decomposition | LangGraph, OpenAI Agents SDK, custom planner |
-| Open Design Adapter | UI/UX generation | Figma plugin, custom design agent, v0-like generator |
+| Memory Layer | User, project, conversation and knowledge memory | Vector DB, custom Postgres memory, external memory service |
+| Template System | Product templates and code blueprints | Custom registry, marketplace templates |
+| Hermes Adapter | Optional agent planning and task decomposition | LangGraph, OpenAI Agents SDK, custom planner |
+| Open Design Adapter | Optional UI/UX generation | Figma plugin, custom design agent, v0-like generator |
 | LLM Gateway | Provider/model routing, prompts, budget | OpenAI, OpenRouter, Anthropic, local models |
 | Project Builder | Creates file tree and code patches | Codex, custom code agent |
 | Sandbox Runner | Executes untrusted code safely | Docker, Firecracker, Vercel Sandbox, E2B |
@@ -158,7 +270,7 @@ flowchart LR
 | Deployment Adapter | Preview and production deploys | Vercel, Fly.io, Render, Docker host |
 | Supabase Repository | Persistent state and storage | Neon/Postgres + S3 + Auth provider |
 
-### 4.2 Stage State Machine
+### 6.2 Stage State Machine
 
 Every project must move through explicit states:
 
@@ -191,24 +303,21 @@ The state machine enforces the Vuls Core Rules:
 - no deploy before testing;
 - no multiple large tasks for the same project at the same time.
 
-## 5. Agent Architecture
+## 7. Agent Architecture
 
-### 5.1 Agent Roles
+### 7.1 Agent Roles
 
 | Agent | Purpose | Input | Output |
 | --- | --- | --- | --- |
 | Intake Agent | Normalizes Telegram text into structured brief | Telegram message | Project brief |
 | Requirements Agent | Finds missing constraints | Brief, user context | Requirements checklist |
-| Architect Agent | Designs modules, APIs, data flow | Requirements | Architecture spec |
-| UX Agent | Produces UX flow and UI requirements | Architecture | UX/UI spec |
-| DB Agent | Designs schema, RLS, migrations plan | Requirements, architecture | Database design |
-| Backend Agent | Designs backend contracts and implementation plan | Architecture, DB design | Backend tasks |
-| Frontend Agent | Designs frontend structure and i18n boundaries | UX/UI, API contracts | Frontend tasks |
-| QA Agent | Runs tests and interprets failures | Project files, logs | Fix recommendations |
-| Security Agent | Reviews secrets, sandboxing, permissions | System and project config | Security report |
-| Deployment Agent | Prepares preview and deploy plan | Passing project | Deploy artifact |
+| Template Agent | Selects the best product template | Requirements, memory | Template choice |
+| Generator Agent | Generates the project from template and requirements | Template, brief, memory | Project files |
+| Repository Agent | Creates ZIP or GitHub Repo | Project files | Download/repo link |
 
-### 5.2 Agent Execution Rule
+The ten-agent model is a target architecture, not v1.0 scope. Architect, UX, DB, Backend, Frontend, QA, Security and Deployment agents can be introduced after the MVP proves the core loop.
+
+### 7.2 Agent Execution Rule
 
 Vuls must not run several major agents on the same unresolved stage in parallel. Parallelism is allowed only inside a stage when tasks are independent and bounded, for example:
 
@@ -218,7 +327,7 @@ Vuls must not run several major agents on the same unresolved stage in parallel.
 
 Hermes coordinates the plan, but the Orchestrator owns the authoritative workflow state. This prevents an external agent from skipping required stages.
 
-### 5.3 Agent Contract
+### 7.3 Agent Contract
 
 Each agent call uses a structured contract:
 
@@ -240,7 +349,7 @@ Each agent call uses a structured contract:
 }
 ```
 
-## 6. Telegram Bot API
+## 8. Telegram Bot API
 
 Telegram is the primary interface for MVP. The Bot Gateway must support:
 
@@ -253,7 +362,7 @@ Telegram is the primary interface for MVP. The Bot Gateway must support:
 - file upload - optional requirement documents, screenshots, archives;
 - voice input - later roadmap item.
 
-### 6.1 Webhook vs Polling
+### 8.1 Webhook vs Polling
 
 MVP local development may use long polling. Production should use webhook over HTTPS with idempotent update handling.
 
@@ -266,7 +375,7 @@ Webhook handler requirements:
 - enqueue work and respond quickly;
 - never run long LLM work inside webhook request.
 
-### 6.2 Telegram Rate Safety
+### 8.2 Telegram Rate Safety
 
 The message sender must include:
 
@@ -276,11 +385,11 @@ The message sender must include:
 - message chunking for long responses;
 - file/document fallback for large artifacts.
 
-## 7. Supabase Database
+## 9. Supabase Database
 
 Supabase is the default database layer for Vuls. It provides Postgres, Auth, Storage, Realtime where needed, and a strong foundation for RLS-based multi-tenancy.
 
-### 7.1 Data Model
+### 9.1 Data Model
 
 Initial tables:
 
@@ -291,6 +400,11 @@ Initial tables:
 | `projects` | User-created product projects |
 | `project_members` | Access control for projects |
 | `project_stages` | Workflow stage status and approvals |
+| `project_memory` | Durable project facts, decisions, constraints and summaries |
+| `conversation_memory` | Telegram conversation summaries and continuation context |
+| `knowledge_memory` | Reusable lessons, snippets, template notes and product patterns |
+| `templates` | Available product templates and metadata |
+| `template_versions` | Versioned template definitions and file blueprints |
 | `agent_runs` | Agent calls, prompts metadata, status, cost |
 | `tasks` | Fine-grained work items within a stage |
 | `artifacts` | Generated files, docs, logs, screenshots |
@@ -301,7 +415,7 @@ Initial tables:
 | `i18n_messages` | Product UI copy keys and translations |
 | `audit_events` | Security and lifecycle audit log |
 
-### 7.2 RLS and Access Control
+### 9.2 RLS and Access Control
 
 RLS must be enabled on all tables exposed through Supabase Data API. Policies should be project-scoped through `project_members`, not through user-editable metadata.
 
@@ -313,7 +427,7 @@ Rules:
 - generated user projects must not share credentials;
 - storage buckets must separate system artifacts and user deliverables.
 
-### 7.3 Storage
+### 9.3 Storage
 
 Supabase Storage can hold:
 
@@ -326,11 +440,85 @@ Supabase Storage can hold:
 
 Large code repositories should live in GitHub, not only in Supabase Storage.
 
-## 8. OpenAI / LLM Layer
+## 10. Memory Layer
+
+Memory Layer is critical because Telegram workflows are asynchronous. A user may return after a week and expect Vuls to remember the project, previous decisions and constraints.
+
+### 10.1 Memory Types
+
+| Memory Type | Purpose | Storage |
+| --- | --- | --- |
+| User Memory | User preferences, language, preferred stack, business context | Supabase Postgres |
+| Project Memory | Product goal, selected template, architecture decisions, generated files summary | Supabase Postgres |
+| Conversation Memory | Telegram conversation summaries, clarification answers, approvals | Supabase Postgres |
+| Knowledge Memory | Reusable patterns, template learnings, common fixes, product heuristics | Supabase Postgres, later vector search |
+
+### 10.2 Memory Rules
+
+- Store durable facts, not raw chat noise.
+- Keep raw messages separately from summarized memory.
+- Every memory item must have `source`, `project_id`, `user_id`, `created_at` and `confidence`.
+- User-editable preferences must not be used for authorization.
+- Project memory must be loaded before every generation or continuation.
+- Memory summaries should be short enough to keep LLM context affordable.
+
+### 10.3 Memory Retrieval
+
+For v1.0, retrieval can be simple:
+
+- load user profile and preferences;
+- load active project summary;
+- load last conversation summary;
+- load selected template metadata.
+
+Post-v1 can add embeddings/vector search for Knowledge Memory.
+
+## 11. Template System
+
+Template System is the main way Vuls becomes faster and cheaper than pure free-form generation. Templates give the LLM a proven structure instead of asking it to invent every file from scratch.
+
+### 11.1 v1.0 Template Catalog
+
+| Template | Use Case | Typical Output |
+| --- | --- | --- |
+| CRM Template | Small business CRM, leads, customers, tasks | React/Next UI, data models, CRUD screens |
+| SaaS Template | Subscription SaaS, landing + app shell | Auth-ready app shell, pricing sections, dashboard |
+| Marketplace Template | Buyer/seller catalog workflows | Listings, profiles, inquiry/order flow |
+| AI Agent Template | Chatbot or workflow agent product | Chat UI, prompt config, tool abstraction |
+| Dashboard Template | Analytics/admin/internal tools | Charts, tables, filters, KPI cards |
+
+### 11.2 Template Structure
+
+Each template should include:
+
+- manifest with name, category, version and supported stacks;
+- file blueprints;
+- prompt instructions;
+- required env vars;
+- i18n key list;
+- default pages/components;
+- Supabase schema hints;
+- quality commands;
+- README generation rules.
+
+### 11.3 Template Selection
+
+The Template Agent selects a template using:
+
+- user idea;
+- detected domain;
+- required entities;
+- preferred stack from User Memory;
+- complexity score;
+- confidence threshold.
+
+If confidence is low, Vuls asks one clarification question instead of guessing.
+
+## 12. OpenAI / LLM Layer
 
 The LLM Layer is the model gateway. It must abstract provider-specific APIs behind a stable internal interface.
 
-### 8.1 Responsibilities
+### 12.1 Responsibilities
 
 - model selection by task type;
 - prompt template rendering;
@@ -342,7 +530,7 @@ The LLM Layer is the model gateway. It must abstract provider-specific APIs behi
 - safety filtering;
 - prompt and response logging with sensitive data redaction.
 
-### 8.2 Provider Abstraction
+### 12.2 Provider Abstraction
 
 ```mermaid
 flowchart TD
@@ -361,7 +549,7 @@ Recommended default:
 - Provider fallback through OpenRouter or another compatible layer.
 - Local models only for non-sensitive low-cost background jobs until quality is proven.
 
-### 8.3 Output Contracts
+### 12.3 Output Contracts
 
 The LLM must not return arbitrary prose when the next system step needs structure. Critical stages should use schemas:
 
@@ -372,11 +560,11 @@ The LLM must not return arbitrary prose when the next system step needs structur
 - test results;
 - fix report.
 
-## 9. Hermes Agent Integration
+## 13. Hermes Agent Integration
 
-Hermes Agent is the planning and stage-control collaborator, not the sole authority. The Orchestrator owns state; Hermes proposes plans and next actions.
+Hermes Agent is an optional planning and stage-control collaborator, not a foundational dependency. Vuls v1.0 must work without Hermes. The Orchestrator owns state; Hermes proposes plans and next actions only when the adapter is enabled.
 
-### 9.1 Integration Modes
+### 13.1 Integration Modes
 
 MVP can support one mode first:
 
@@ -386,9 +574,9 @@ MVP can support one mode first:
 | HTTP Adapter | Hermes runs as a service behind an internal API | Production |
 | Native Gateway | Hermes handles Telegram directly | Useful for experiments, less control for Vuls |
 
-Recommended: CLI Adapter for local MVP, then HTTP Adapter for production.
+Recommended: no Hermes dependency in v1.0. Add CLI Adapter after the core Telegram/Supabase/OpenAI/GitHub loop works; add HTTP Adapter later for production.
 
-### 9.2 Hermes Responsibilities
+### 13.2 Hermes Responsibilities
 
 - turn user idea into ordered stage plan;
 - detect missing requirements;
@@ -397,11 +585,11 @@ Recommended: CLI Adapter for local MVP, then HTTP Adapter for production.
 - recommend when to ask user for approval;
 - never bypass Orchestrator stage locks.
 
-## 10. Open Design Integration
+## 14. Open Design Integration
 
-Open Design is the UI/UX generation layer. Vuls should treat it as a replaceable design engine.
+Open Design is an optional UI/UX generation layer. Vuls v1.0 must work without Open Design by using product templates and simple UI conventions. Open Design becomes valuable after MVP when users need richer UI/UX iteration.
 
-### 10.1 Responsibilities
+### 14.1 Responsibilities
 
 - transform product requirements into UX flows;
 - generate layout specs;
@@ -411,7 +599,7 @@ Open Design is the UI/UX generation layer. Vuls should treat it as a replaceable
 - produce frontend-ready UI requirements;
 - optionally export design assets.
 
-### 10.2 Contract
+### 14.2 Contract
 
 Open Design input:
 
@@ -432,11 +620,11 @@ Open Design output:
 - empty/loading/error states;
 - i18n text key list, not hardcoded text.
 
-## 11. GitHub Integration
+## 15. GitHub Integration
 
 GitHub stores generated user projects, version history and collaboration artifacts.
 
-### 11.1 Responsibilities
+### 15.1 Responsibilities
 
 - create repository per project or per user workspace;
 - commit generated files;
@@ -445,7 +633,7 @@ GitHub stores generated user projects, version history and collaboration artifac
 - store CI results and deployment metadata;
 - allow user export/ownership transfer later.
 
-### 11.2 Repository Strategy
+### 15.2 Repository Strategy
 
 Recommended MVP strategy:
 
@@ -455,15 +643,15 @@ Recommended MVP strategy:
 - never commit secrets;
 - generated `.env.example` only includes variable names.
 
-### 11.3 GitHub App vs PAT
+### 15.3 GitHub App vs PAT
 
 Production should use a GitHub App with scoped permissions. Personal access tokens are acceptable only for internal prototypes.
 
-## 12. Docker Infrastructure
+## 16. Docker Infrastructure
 
 Docker provides reproducible runtime for Vuls services and generated projects.
 
-### 12.1 Vuls Service Containers
+### 16.1 Vuls Service Containers
 
 Initial containers:
 
@@ -476,7 +664,7 @@ Initial containers:
 - optional local Postgres for development;
 - optional Open Design/Hermes sidecars.
 
-### 12.2 Generated Project Containers
+### 16.2 Generated Project Containers
 
 Each generated project should include:
 
@@ -487,11 +675,11 @@ Each generated project should include:
 - start/build/test scripts;
 - resource expectations.
 
-## 13. Sandbox Execution Environment
+## 17. Sandbox Execution Environment
 
-Sandboxing is mandatory because Vuls executes user-requested and model-generated code.
+Sandboxing is mandatory before Vuls executes user-requested and model-generated code. Because MVP v1.0 returns ZIP/GitHub Repo without running arbitrary project code, sandbox execution is a post-v1 requirement rather than a v1.0 launch blocker.
 
-### 13.1 Isolation Requirements
+### 17.1 Isolation Requirements
 
 - no host filesystem access outside assigned workspace;
 - no access to Vuls secrets;
@@ -501,7 +689,7 @@ Sandboxing is mandatory because Vuls executes user-requested and model-generated
 - disposable workspace per run;
 - logs captured and attached to `sandbox_runs`.
 
-### 13.2 Sandbox Options
+### 17.2 Sandbox Options
 
 | Option | Use Case | Trade-off |
 | --- | --- | --- |
@@ -511,9 +699,9 @@ Sandboxing is mandatory because Vuls executes user-requested and model-generated
 
 Recommended: hardened Docker for local MVP, design interface so Firecracker/managed sandbox can replace it.
 
-## 14. Code Interpreter
+## 18. Code Interpreter
 
-Code Interpreter is the fast execution and analysis layer. It should run bounded commands and summarize results for agents.
+Code Interpreter is the fast execution and analysis layer. It should run bounded commands and summarize results for agents. It is designed in v1.0 but activated after the sandbox runner exists.
 
 Use cases:
 
@@ -534,11 +722,11 @@ Rules:
 - no interactive commands;
 - no direct secret access.
 
-## 15. Playwright Browser Automation
+## 19. Playwright Browser Automation
 
-Playwright validates generated web apps through browser-level testing.
+Playwright validates generated web apps through browser-level testing. It is not required for MVP v1.0 because v1.0 does not automatically run generated web apps.
 
-### 15.1 Responsibilities
+### 19.1 Responsibilities
 
 - start generated app preview in sandbox;
 - run smoke test: page loads, no console errors, main flow visible;
@@ -547,7 +735,7 @@ Playwright validates generated web apps through browser-level testing.
 - report accessibility and layout issues where possible;
 - attach trace and screenshots to artifacts.
 
-### 15.2 MVP Browser Checks
+### 19.2 MVP Browser Checks
 
 - homepage renders;
 - primary CTA/input works;
@@ -556,7 +744,7 @@ Playwright validates generated web apps through browser-level testing.
 - no fatal console errors;
 - generated app has loading/error/empty states where required.
 
-## 16. ESLint
+## 20. ESLint
 
 ESLint enforces baseline JavaScript/TypeScript correctness.
 
@@ -570,7 +758,7 @@ Requirements:
 
 ESLint is a validator, not the only quality system. TypeScript, tests and runtime checks remain necessary.
 
-## 17. Prettier
+## 21. Prettier
 
 Prettier provides deterministic formatting for generated code.
 
@@ -582,16 +770,16 @@ Requirements:
 - avoid reformatting unrelated files during iterative updates;
 - integrate with lint-staged or CI later.
 
-## 18. Security Layer
+## 22. Security Layer
 
-### 18.1 Secrets
+### 22.1 Secrets
 
 - Telegram token, OpenAI keys, Supabase service role, GitHub credentials and deployment tokens must live in server-side secret storage.
 - No secrets in generated repositories.
 - `.env.example` is allowed; `.env` is not committed.
 - Secrets used by user deployments must be scoped per project.
 
-### 18.2 User and Project Isolation
+### 22.2 User and Project Isolation
 
 - every project has an owner and membership list;
 - every artifact belongs to a project;
@@ -599,7 +787,7 @@ Requirements:
 - users cannot access artifacts outside projects they belong to;
 - audit events record sensitive actions.
 
-### 18.3 Prompt and Artifact Safety
+### 22.3 Prompt and Artifact Safety
 
 - redact tokens and personally sensitive fields from logs;
 - store prompt history with access control;
@@ -607,7 +795,7 @@ Requirements:
 - scan generated code for suspicious commands before execution;
 - require explicit approval for network access inside sandbox.
 
-## 19. Multi-language System (i18n)
+## 23. Multi-language System (i18n)
 
 Vuls must support multilingual UI and generated product copy from day one.
 
@@ -646,9 +834,9 @@ Suggested key structure:
 }
 ```
 
-## 20. Deployment Architecture
+## 24. Deployment Architecture
 
-### 20.1 Vuls Platform Deployment
+### 24.1 Vuls Platform Deployment
 
 MVP:
 
@@ -669,20 +857,20 @@ Production:
 - observability stack;
 - CI/CD deployment pipeline.
 
-### 20.2 Generated Project Deployment
+### 24.2 Generated Project Deployment
 
-Generated projects can support multiple deployment targets through adapters:
+Generated projects can support multiple deployment targets through adapters after MVP v1.0:
 
 - Vercel for frontend/Next.js projects;
 - Docker host for backend/full-stack projects;
 - GitHub Pages for static sites;
 - manual ZIP export for early MVP.
 
-Deployment must happen only after tests pass.
+Deployment must happen only after tests pass. MVP v1.0 should return ZIP/GitHub Repo and avoid automated deployment until sandbox and test execution are available.
 
-## 21. Scaling Strategy
+## 25. Scaling Strategy
 
-### 21.1 Scale by Workload Type
+### 25.1 Scale by Workload Type
 
 | Workload | Scaling Method |
 | --- | --- |
@@ -694,7 +882,7 @@ Deployment must happen only after tests pass.
 | LLM calls | provider rate limits, budget queues |
 | GitHub/deploy | serialized per project |
 
-### 21.2 Concurrency Rules
+### 25.2 Concurrency Rules
 
 - one active major stage per project;
 - multiple projects can run concurrently;
@@ -702,7 +890,7 @@ Deployment must happen only after tests pass.
 - per-provider rate limits are centrally enforced;
 - every long job can be resumed or marked failed with retry context.
 
-### 21.3 Data Scaling
+### 25.3 Data Scaling
 
 - Supabase/Postgres starts as primary store;
 - partition large logs/artifacts into object storage;
@@ -710,12 +898,12 @@ Deployment must happen only after tests pass.
 - add read replicas only after real bottlenecks appear;
 - avoid storing full repo content in database.
 
-## 22. Roadmap
+## 26. Roadmap
 
 ### Phase 0 - Architecture and Product Definition
 
 - Write and approve this specification.
-- Define MVP boundaries.
+- Define MVP v1.0 boundaries.
 - Select initial stack.
 - Define security and sandbox rules.
 
@@ -723,8 +911,9 @@ Deployment must happen only after tests pass.
 
 - Telegram bot intake.
 - Supabase schema.
-- project/session state machine.
-- basic LLM planning and response.
+- User Memory, Project Memory and Conversation Memory.
+- Template System with CRM, SaaS, Marketplace, AI Agent and Dashboard templates.
+- basic LLM planning and project generation.
 - GitHub repo creation.
 - simple ZIP/repo output.
 
@@ -768,9 +957,9 @@ Deployment must happen only after tests pass.
 - project templates;
 - enterprise controls.
 
-## 23. Critical Architecture Analysis
+## 27. Critical Architecture Analysis
 
-### 23.1 Weak Spot: Too Many Powerful External Components
+### 27.1 Weak Spot: Too Many Powerful External Components
 
 Risk: Hermes, Open Design, OpenAI, GitHub, Supabase, Docker and Playwright all introduce independent failure modes.
 
@@ -780,8 +969,19 @@ Improvement:
 - store all stage outputs as artifacts;
 - allow degraded mode, for example "LLM planning without Open Design";
 - add health checks per adapter.
+- keep Hermes, Open Design, Playwright, Sandbox Pool and Deployment Layer outside mandatory v1.0 scope.
 
-### 23.2 Weak Spot: Sandbox Security
+### 27.2 Weak Spot: MVP Scope Too Large
+
+Risk: building a Base44 competitor in one release would stretch development across months.
+
+Improvement:
+
+- v1.0 is limited to Telegram, Supabase, OpenAI/LLM, Template System, GitHub and ZIP export;
+- advanced agents, Open Design, sandbox execution, browser testing and deployment are postponed;
+- every roadmap phase must ship a complete user-visible loop.
+
+### 27.3 Weak Spot: Sandbox Security
 
 Risk: generated code can be malicious or accidentally destructive.
 
@@ -793,7 +993,7 @@ Improvement:
 - never mount host secrets;
 - keep sandbox runner physically/logically separate from orchestrator.
 
-### 23.3 Weak Spot: Agent Drift
+### 27.4 Weak Spot: Agent Drift
 
 Risk: agents may skip required stages, produce unstructured output or contradict prior decisions.
 
@@ -804,7 +1004,7 @@ Improvement:
 - every stage has explicit acceptance criteria;
 - user approval gates high-impact transitions.
 
-### 23.4 Weak Spot: Telegram UX for Complex Product Building
+### 27.5 Weak Spot: Telegram UX for Complex Product Building
 
 Risk: Telegram is convenient for input but weak for reviewing complex UI/code artifacts.
 
@@ -815,7 +1015,7 @@ Improvement:
 - add web dashboard after MVP;
 - summarize long outputs, attach full artifacts as files.
 
-### 23.5 Weak Spot: i18n Complexity
+### 27.6 Weak Spot: i18n Complexity
 
 Risk: 12 languages from day one can slow product generation and produce incomplete translations.
 
@@ -826,7 +1026,7 @@ Improvement:
 - allow generated app translations to be marked machine-generated;
 - add translation completeness checks before deploy.
 
-### 23.6 Weak Spot: Cost and Rate Limits
+### 27.7 Weak Spot: Cost and Rate Limits
 
 Risk: LLM and browser automation can become expensive under repeated retries.
 
@@ -837,8 +1037,9 @@ Improvement:
 - summarize logs before sending them to LLM;
 - cap auto-fix loops;
 - require user confirmation after repeated failures.
+- use templates to reduce prompt size and regeneration loops.
 
-### 23.7 Weak Spot: GitHub Ownership Model
+### 27.8 Weak Spot: GitHub Ownership Model
 
 Risk: projects stored under a platform-owned GitHub org may later need transfer to users.
 
@@ -849,23 +1050,25 @@ Improvement:
 - use GitHub App permissions;
 - do not couple project identity to repository URL.
 
-## 24. Open Decisions
+## 28. Open Decisions
 
 These decisions should be confirmed before implementation:
 
-1. Product name: latest request uses "Vuls"; repository folder is "Vols". Choose one canonical public name before UI work.
+1. Product name: v1.0 architecture uses "Vuls". Repository folder remains `Vols` until renamed intentionally.
 2. Initial backend language: TypeScript/Node.js or Python/FastAPI.
 3. Workflow engine: simple DB-backed queue for MVP or a formal engine like Temporal.
-4. Sandbox provider: hardened Docker first or managed sandbox first.
-5. Deployment target for generated apps: Vercel first, Docker first, or ZIP/GitHub first.
+4. Sandbox provider after v1.0: hardened Docker first or managed sandbox first.
+5. Deployment target after v1.0: Vercel first, Docker first, or another preview host.
 6. GitHub model: platform-owned GitHub App or user-connected GitHub account.
 
-## 25. Acceptance Criteria for This Specification
+## 29. Acceptance Criteria for This Specification
 
 The architecture document is complete when:
 
 - all required sections from the user request are present;
 - the system is modular and every external dependency has an adapter boundary;
+- MVP v1.0 scope is explicitly smaller than the full Base44-like vision;
+- Business Model, Memory Layer and Template System are defined;
 - the Vuls stage workflow is enforced;
 - Supabase, LLM, Telegram, Hermes, Open Design, GitHub, Docker, Sandbox, Code Interpreter, Playwright, ESLint and Prettier are included;
 - i18n requirements cover all required languages;
@@ -873,7 +1076,7 @@ The architecture document is complete when:
 - critical weaknesses and improvements are documented;
 - implementation has not started.
 
-## 26. Reference Links
+## 30. Reference Links
 
 - Telegram Bot API: https://core.telegram.org/bots/api
 - Supabase Row Level Security: https://supabase.com/docs/guides/database/postgres/row-level-security
@@ -885,4 +1088,3 @@ The architecture document is complete when:
 - Playwright docs: https://playwright.dev/docs/intro
 - ESLint configuration docs: https://eslint.org/docs/latest/use/configure/
 - Prettier configuration docs: https://prettier.io/docs/configuration
-
