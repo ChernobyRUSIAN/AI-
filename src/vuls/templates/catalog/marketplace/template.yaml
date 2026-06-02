@@ -1,0 +1,12 @@
+{
+  "key": "marketplace",
+  "name": "Marketplace",
+  "description": "Two-sided marketplace product for buyers, sellers, listings, bookings, orders and trust-building discovery flows.",
+  "category": "commerce_platform",
+  "default_pages": ["home", "browse", "listing", "seller_dashboard", "checkout", "messages"],
+  "default_entities": ["buyer", "seller", "listing", "order", "booking", "review", "message"],
+  "default_roles": ["buyer", "seller", "admin"],
+  "keywords": ["marketplace", "two", "sided", "buyer", "buyers", "seller", "sellers", "listing", "listings", "booking", "bookings", "tutor", "tutors", "students"],
+  "i18n_keys": ["app.title", "nav.browse", "nav.seller_dashboard", "nav.messages", "action.buy", "state.empty"],
+  "readme_sections": ["overview", "features", "setup", "environment", "testing"]
+}

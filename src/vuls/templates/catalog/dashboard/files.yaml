@@ -1,0 +1,11 @@
+{
+  "files": [
+    {"path": "README.md", "purpose": "Project overview, setup and testing instructions"},
+    {"path": "src/app/page.tsx", "purpose": "Dashboard overview with KPI cards"},
+    {"path": "src/app/analytics/page.tsx", "purpose": "Charts and analytics drill-down"},
+    {"path": "src/app/reports/page.tsx", "purpose": "Reports and saved views"},
+    {"path": "src/app/alerts/page.tsx", "purpose": "Operational alert list"},
+    {"path": "src/app/settings/page.tsx", "purpose": "Dashboard data source and display settings"},
+    {"path": "src/i18n/en.json", "purpose": "Default English localization keys"}
+  ]
+}

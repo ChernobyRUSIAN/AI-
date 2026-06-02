@@ -1,0 +1,11 @@
+{
+  "files": [
+    {"path": "README.md", "purpose": "Project overview, setup and testing instructions"},
+    {"path": "src/app/dashboard/page.tsx", "purpose": "CRM dashboard with KPIs and recent activity"},
+    {"path": "src/app/customers/page.tsx", "purpose": "Customer list and customer management entry point"},
+    {"path": "src/app/deals/page.tsx", "purpose": "Sales pipeline and deal tracking"},
+    {"path": "src/app/orders/page.tsx", "purpose": "Order history and order status view"},
+    {"path": "src/app/tasks/page.tsx", "purpose": "Follow-up tasks for owner and staff"},
+    {"path": "src/i18n/en.json", "purpose": "Default English localization keys"}
+  ]
+}

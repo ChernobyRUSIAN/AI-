@@ -1,0 +1,12 @@
+{
+  "key": "crm",
+  "name": "CRM",
+  "description": "Customer relationship management product for tracking customers, deals, orders, tasks and team follow-ups.",
+  "category": "business_operations",
+  "default_pages": ["dashboard", "customers", "deals", "orders", "tasks", "settings"],
+  "default_entities": ["customer", "contact", "deal", "order", "task", "note"],
+  "default_roles": ["owner", "manager", "staff"],
+  "keywords": ["crm", "customer", "customers", "contact", "contacts", "deal", "deals", "order", "orders", "sales", "pipeline", "coffee"],
+  "i18n_keys": ["app.title", "nav.dashboard", "nav.customers", "nav.deals", "nav.orders", "nav.tasks", "action.create", "state.empty"],
+  "readme_sections": ["overview", "features", "setup", "environment", "testing"]
+}

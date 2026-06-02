@@ -1,0 +1,11 @@
+{
+  "files": [
+    {"path": "README.md", "purpose": "Project overview, setup and testing instructions"},
+    {"path": "src/app/chat/page.tsx", "purpose": "Agent chat and intake surface"},
+    {"path": "src/app/tasks/page.tsx", "purpose": "Agent task planning and status board"},
+    {"path": "src/app/tools/page.tsx", "purpose": "Tool registry and configuration"},
+    {"path": "src/app/runs/page.tsx", "purpose": "Run history and execution details"},
+    {"path": "src/app/knowledge/page.tsx", "purpose": "Knowledge memory management"},
+    {"path": "src/i18n/en.json", "purpose": "Default English localization keys"}
+  ]
+}

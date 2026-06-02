@@ -1,0 +1,12 @@
+{
+  "key": "dashboard",
+  "name": "Dashboard",
+  "description": "Analytics dashboard product for KPIs, charts, reporting, filters, alerts and operational decision-making.",
+  "category": "analytics_reporting",
+  "default_pages": ["overview", "analytics", "reports", "alerts", "settings"],
+  "default_entities": ["metric", "chart", "report", "filter", "alert", "data_source"],
+  "default_roles": ["analyst", "manager", "admin"],
+  "keywords": ["dashboard", "analytics", "kpi", "kpis", "chart", "charts", "report", "reports", "metrics", "operations", "alerts", "sales"],
+  "i18n_keys": ["app.title", "nav.overview", "nav.analytics", "nav.reports", "nav.alerts", "action.export", "state.empty"],
+  "readme_sections": ["overview", "features", "setup", "environment", "testing"]
+}

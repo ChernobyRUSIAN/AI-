@@ -1,0 +1,12 @@
+{
+  "key": "ai_agent",
+  "name": "AI Agent",
+  "description": "Agentic application for intake, planning, tool execution, review loops and human approval workflows.",
+  "category": "agentic_workflow",
+  "default_pages": ["chat", "tasks", "tools", "runs", "knowledge", "settings"],
+  "default_entities": ["agent", "task", "tool", "run", "message", "knowledge_item"],
+  "default_roles": ["operator", "reviewer", "admin"],
+  "keywords": ["ai", "agent", "agents", "assistant", "tool", "tools", "triage", "ticket", "tickets", "automation", "workflow", "knowledge"],
+  "i18n_keys": ["app.title", "nav.chat", "nav.tasks", "nav.tools", "nav.runs", "action.approve", "state.empty"],
+  "readme_sections": ["overview", "features", "setup", "environment", "testing"]
+}

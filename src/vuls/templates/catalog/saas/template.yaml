@@ -1,0 +1,12 @@
+{
+  "key": "saas",
+  "name": "SaaS",
+  "description": "Subscription software product with workspace management, onboarding, billing-ready structure and role-based account areas.",
+  "category": "subscription_product",
+  "default_pages": ["landing", "onboarding", "dashboard", "billing", "settings", "admin"],
+  "default_entities": ["workspace", "subscription", "plan", "member", "invite", "feature"],
+  "default_roles": ["owner", "admin", "member"],
+  "keywords": ["saas", "subscription", "billing", "workspace", "workspaces", "team", "teams", "plan", "plans", "onboarding", "members"],
+  "i18n_keys": ["app.title", "nav.dashboard", "nav.billing", "nav.settings", "action.upgrade", "state.empty"],
+  "readme_sections": ["overview", "features", "setup", "environment", "testing"]
+}

@@ -1,0 +1,11 @@
+{
+  "files": [
+    {"path": "README.md", "purpose": "Project overview, setup and testing instructions"},
+    {"path": "src/app/page.tsx", "purpose": "SaaS landing and product entry page"},
+    {"path": "src/app/onboarding/page.tsx", "purpose": "Workspace onboarding flow"},
+    {"path": "src/app/dashboard/page.tsx", "purpose": "Workspace dashboard"},
+    {"path": "src/app/billing/page.tsx", "purpose": "Billing-ready plan and subscription page"},
+    {"path": "src/app/settings/page.tsx", "purpose": "Account and workspace settings"},
+    {"path": "src/i18n/en.json", "purpose": "Default English localization keys"}
+  ]
+}

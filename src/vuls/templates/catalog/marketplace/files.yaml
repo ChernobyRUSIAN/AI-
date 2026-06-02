@@ -1,0 +1,11 @@
+{
+  "files": [
+    {"path": "README.md", "purpose": "Project overview, setup and testing instructions"},
+    {"path": "src/app/page.tsx", "purpose": "Marketplace home and discovery entry"},
+    {"path": "src/app/browse/page.tsx", "purpose": "Searchable listing browse experience"},
+    {"path": "src/app/listings/[id]/page.tsx", "purpose": "Listing details and purchase or booking call to action"},
+    {"path": "src/app/seller/page.tsx", "purpose": "Seller listing management dashboard"},
+    {"path": "src/app/messages/page.tsx", "purpose": "Buyer and seller messaging area"},
+    {"path": "src/i18n/en.json", "purpose": "Default English localization keys"}
+  ]
+}
