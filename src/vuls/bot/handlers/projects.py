@@ -14,5 +14,6 @@ class ProjectsService(Protocol):
 
 
 def handle_projects(message: object, service: ProjectsService) -> BotReply:
-    projects = service.list_recent_projects(identity_from_message(message))
-    return BotReply(text=render_recent_projects(projects))
+    identity = identity_from_message(message)
+    projects = service.list_recent_projects(identity)
+    return BotReply(text=render_recent_projects(projects, identity.language_code))

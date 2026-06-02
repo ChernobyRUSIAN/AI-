@@ -14,5 +14,6 @@ class StatusService(Protocol):
 
 
 def handle_status(message: object, service: StatusService) -> BotReply:
-    project = service.get_active_project(identity_from_message(message))
-    return BotReply(text=render_project_status(project))
+    identity = identity_from_message(message)
+    project = service.get_active_project(identity)
+    return BotReply(text=render_project_status(project, identity.language_code))

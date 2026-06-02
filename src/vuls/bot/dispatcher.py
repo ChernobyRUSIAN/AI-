@@ -12,8 +12,10 @@ from vuls.bot.messages import (
     ProjectStatusView,
     ProjectSummary,
     TelegramUserIdentity,
+    identity_from_message,
     message_text,
 )
+from vuls.i18n import translate
 
 
 class TelegramFlowService(Protocol):
@@ -53,7 +55,8 @@ class TelegramDispatcher:
             return handle_projects(message, self._service)
         if text.startswith("/status"):
             return handle_status(message, self._service)
-        return BotReply(text="Send /new followed by your product idea.")
+        identity = identity_from_message(message)
+        return BotReply(text=translate("bot.new_project_help", identity.language_code))
 
     def dispatch_callback(self, callback: object) -> BotReply:
         return handle_callback(callback, self._service)

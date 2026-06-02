@@ -1,6 +1,8 @@
 from dataclasses import dataclass, field
 from typing import Literal
 
+from vuls.i18n import translate
+
 
 @dataclass(frozen=True)
 class TelegramUserIdentity:
@@ -63,14 +65,6 @@ class ProjectStatusView:
     url: str | None = None
 
 
-WELCOME_MESSAGE = (
-    "Vuls is ready. New project: send /new with a product idea and I will turn it "
-    "into a project."
-)
-NEW_PROJECT_HELP = "Send /new followed by your product idea."
-NO_RECENT_PROJECTS = "No recent projects yet. Send /new to start one."
-NO_ACTIVE_PROJECT = "No active project. Send /new to start one."
-UNKNOWN_CALLBACK = "I do not recognize this action yet."
 MAX_CLARIFICATION_QUESTIONS = 3
 
 
@@ -116,56 +110,83 @@ def command_payload(text: str, command: str) -> str:
     return stripped[len(command) :].strip()
 
 
-def render_intake_result(result: ProjectIntakeResult) -> str:
+def render_intake_result(result: ProjectIntakeResult, language_code: str = "en") -> str:
     lines = [result.message]
     if result.recommended_template is not None:
-        lines.append(f"Recommended template: {result.recommended_template}")
+        lines.append(
+            translate(
+                "bot.intake.recommended_template",
+                language_code,
+                template=result.recommended_template,
+            )
+        )
 
     questions = result.clarification_questions[:MAX_CLARIFICATION_QUESTIONS]
     if questions:
-        lines.append("Clarifying questions:")
-        lines.extend(f"{index}. {question}" for index, question in enumerate(questions, start=1))
+        lines.append(translate("bot.intake.clarifying_questions", language_code))
+        lines.extend(
+            translate(
+                "bot.intake.question_line",
+                language_code,
+                index=index,
+                question=question,
+            )
+            for index, question in enumerate(questions, start=1)
+        )
 
     return "\n".join(lines)
 
 
-def render_generation_reply(result: ProjectGenerationReply) -> str:
+def render_generation_reply(result: ProjectGenerationReply, language_code: str = "en") -> str:
     lines = [
-        f"Project {result.project_id} completed.",
-        f"Template: {result.template}",
+        translate("bot.generation.completed", language_code, project_id=result.project_id),
+        translate("bot.generation.template", language_code, template=result.template),
     ]
     if result.github_url is not None:
-        lines.append(f"GitHub repository: {result.github_url}")
+        lines.append(translate("bot.generation.github_url", language_code, url=result.github_url))
     if result.zip_artifact_id is not None:
-        lines.append(f"ZIP artifact: {result.zip_artifact_id}")
+        lines.append(
+            translate(
+                "bot.generation.zip_artifact",
+                language_code,
+                artifact_id=result.zip_artifact_id,
+            )
+        )
     return "\n".join(lines)
 
 
-def render_recent_projects(projects: list[ProjectSummary]) -> str:
+def render_recent_projects(projects: list[ProjectSummary], language_code: str = "en") -> str:
     if not projects:
-        return NO_RECENT_PROJECTS
-    lines = ["Recent projects:"]
+        return translate("bot.no_recent_projects", language_code)
+    lines = [translate("bot.projects.header", language_code)]
     lines.extend(
-        f"- {project.title} ({project.status}) [{project.project_id}]" for project in projects
+        translate(
+            "bot.projects.item",
+            language_code,
+            title=project.title,
+            status=project.status,
+            project_id=project.project_id,
+        )
+        for project in projects
     )
     return "\n".join(lines)
 
 
-def render_project_status(project: ProjectStatusView | None) -> str:
+def render_project_status(project: ProjectStatusView | None, language_code: str = "en") -> str:
     if project is None:
-        return NO_ACTIVE_PROJECT
+        return translate("bot.no_active_project", language_code)
 
     lines = [
-        f"Active project: {project.title}",
-        f"Status: {project.status}",
-        f"Project ID: {project.project_id}",
+        translate("bot.status.header", language_code, title=project.title),
+        translate("bot.status.status", language_code, status=project.status),
+        translate("bot.status.project_id", language_code, project_id=project.project_id),
     ]
     if project.template is not None:
-        lines.append(f"Template: {project.template}")
+        lines.append(translate("bot.status.template", language_code, template=project.template))
     if project.export is not None:
-        lines.append(f"Export: {project.export}")
+        lines.append(translate("bot.status.export", language_code, export=project.export))
     if project.url is not None:
-        lines.append(f"URL: {project.url}")
+        lines.append(translate("bot.status.url", language_code, url=project.url))
     return "\n".join(lines)
 
 

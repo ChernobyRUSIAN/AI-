@@ -2,7 +2,6 @@ from typing import Protocol
 
 from vuls.bot.keyboards import export_choice_keyboard
 from vuls.bot.messages import (
-    NEW_PROJECT_HELP,
     BotReply,
     ProjectIntakeResult,
     TelegramUserIdentity,
@@ -11,6 +10,7 @@ from vuls.bot.messages import (
     message_text,
     render_intake_result,
 )
+from vuls.i18n import translate
 
 
 class NewProjectService(Protocol):
@@ -22,12 +22,13 @@ class NewProjectService(Protocol):
 
 
 def handle_new_project(message: object, service: NewProjectService) -> BotReply:
+    identity = identity_from_message(message)
     idea = command_payload(message_text(message), "/new")
     if not idea:
-        return BotReply(text=NEW_PROJECT_HELP)
+        return BotReply(text=translate("bot.new_project_help", identity.language_code))
 
-    result = service.start_new_project(identity_from_message(message), idea)
+    result = service.start_new_project(identity, idea)
     return BotReply(
-        text=render_intake_result(result),
-        keyboard=export_choice_keyboard(result.project_id),
+        text=render_intake_result(result, identity.language_code),
+        keyboard=export_choice_keyboard(result.project_id, identity.language_code),
     )
