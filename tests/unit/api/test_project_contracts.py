@@ -1,4 +1,5 @@
 import inspect
+from pathlib import Path
 
 from fastapi.testclient import TestClient
 
@@ -12,6 +13,7 @@ from vuls.api.routes.projects import (
     ProjectDetailResult,
     ProjectGenerationResult,
 )
+from vuls.core.config import AppEnv, Settings
 
 
 class FakeProjectService:
@@ -48,7 +50,7 @@ class FakeProjectService:
 
 
 def test_create_project_contract_validates_request_and_response_shape() -> None:
-    app = create_api_app()
+    app = _create_test_app()
     app.dependency_overrides[get_project_service] = lambda: FakeProjectService()
     client = TestClient(app)
 
@@ -71,7 +73,7 @@ def test_create_project_contract_validates_request_and_response_shape() -> None:
 
 
 def test_create_project_contract_rejects_invalid_request_shape() -> None:
-    client = TestClient(create_api_app())
+    client = TestClient(_create_test_app())
 
     response = client.post(
         "/internal/projects",
@@ -87,7 +89,7 @@ def test_create_project_contract_rejects_invalid_request_shape() -> None:
 
 
 def test_generate_project_contract_validates_request_and_response_shape() -> None:
-    app = create_api_app()
+    app = _create_test_app()
     app.dependency_overrides[get_project_service] = lambda: FakeProjectService()
     client = TestClient(app)
 
@@ -113,7 +115,7 @@ def test_generate_project_contract_validates_request_and_response_shape() -> Non
 
 
 def test_project_status_contract_validates_response_shape() -> None:
-    app = create_api_app()
+    app = _create_test_app()
     app.dependency_overrides[get_project_service] = lambda: FakeProjectService()
     client = TestClient(app)
 
@@ -144,3 +146,25 @@ def test_routes_do_not_directly_import_external_clients() -> None:
         "from github",
     )
     assert all(import_text not in route_sources for import_text in forbidden_imports)
+
+
+def _create_test_app():
+    return create_api_app(settings=_settings(), build_runtime=False)
+
+
+def _settings() -> Settings:
+    return Settings(
+        app_env=AppEnv.LOCAL,
+        app_base_url="https://vuls.example.com",
+        app_secret_key="dev-secret-key",
+        telegram_bot_token="123456:telegram-token",
+        telegram_webhook_secret="telegram-webhook-secret",
+        supabase_url="https://example.supabase.co",
+        supabase_service_role_key="supabase-service-role",
+        supabase_storage_bucket="vuls-artifacts",
+        openai_api_key="openai-key",
+        openai_model="gpt-5.1",
+        github_token="github-token",
+        github_owner="vuls",
+        project_workdir=Path("var/projects"),
+    )

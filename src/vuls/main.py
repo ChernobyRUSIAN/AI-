@@ -1,18 +1,25 @@
 from fastapi import FastAPI
 
+from vuls.api.app import create_api_app
 from vuls.core.config import Settings, load_settings
 from vuls.core.logging import configure_logging
+from vuls.runtime.container import RuntimeContainer
 
 
-def create_app(settings: Settings | None = None) -> FastAPI:
+def create_app(
+    settings: Settings | None = None,
+    runtime: RuntimeContainer | None = None,
+) -> FastAPI:
     app_settings = settings or load_settings()
     configure_logging(app_settings.log_level)
 
-    return FastAPI(
-        title="Vuls",
-        version="0.1.0",
-        debug=app_settings.app_env == "local",
+    app = create_api_app(
+        settings=app_settings,
+        runtime=runtime,
+        build_runtime=runtime is None,
     )
+    app.debug = app_settings.app_env == "local"
+    return app
 
 
 def main() -> None:
