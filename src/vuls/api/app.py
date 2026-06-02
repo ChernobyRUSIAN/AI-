@@ -3,6 +3,7 @@ from fastapi import FastAPI
 from vuls.api.routes import health, internal, telegram
 from vuls.core.config import Settings, load_settings
 from vuls.runtime.container import RuntimeContainer, build_runtime_container
+from vuls.runtime.validation import ensure_runtime_ready, validate_runtime_startup
 
 
 def create_api_app(
@@ -17,9 +18,17 @@ def create_api_app(
     if app_runtime is None and build_runtime:
         app_runtime = build_runtime_container(settings=app_settings)
 
+    runtime_validation = validate_runtime_startup(
+        settings=app_settings,
+        runtime=app_runtime,
+        require_runtime=app_runtime is not None or build_runtime,
+    )
+    ensure_runtime_ready(runtime_validation)
+
     app = FastAPI(title="Vuls API", version="v1.0")
     app.state.settings = app_settings
     app.state.runtime = app_runtime
+    app.state.runtime_validation = runtime_validation
     app.state.telegram_webhook_secret = (
         telegram_webhook_secret or app_settings.telegram_webhook_secret
     )

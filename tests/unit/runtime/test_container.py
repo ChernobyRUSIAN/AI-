@@ -14,6 +14,7 @@ from vuls.llm.schemas import (
 )
 from vuls.main import create_app
 from vuls.runtime.container import build_runtime_container
+from vuls.runtime.validation import RuntimeValidationError
 
 
 class FakeSupabaseClient:
@@ -146,6 +147,7 @@ def test_create_api_app_loads_runtime_settings_secret_and_container(tmp_path: Pa
     assert app.state.settings is settings
     assert app.state.runtime is container
     assert app.state.telegram_webhook_secret == "from-env-secret"
+    assert app.state.runtime_validation.ready is True
 
     client = TestClient(app)
     invalid_response = client.post("/webhooks/telegram/wrong-secret", json={"update_id": 1})
@@ -154,6 +156,18 @@ def test_create_api_app_loads_runtime_settings_secret_and_container(tmp_path: Pa
     assert invalid_response.status_code == 403
     assert valid_response.status_code == 200
     assert valid_response.json() == {"ok": True}
+
+
+def test_create_api_app_rejects_invalid_runtime_settings(tmp_path: Path) -> None:
+    settings = runtime_settings(tmp_path)
+    invalid_settings = settings.model_copy(update={"openai_api_key": ""})
+
+    try:
+        create_api_app(settings=invalid_settings, build_runtime=False)
+    except RuntimeValidationError as exc:
+        assert "OPENAI_API_KEY" in str(exc)
+    else:
+        raise AssertionError("Expected invalid startup settings to be rejected")
 
 
 def test_main_create_app_uses_routed_api_app(tmp_path: Path) -> None:
