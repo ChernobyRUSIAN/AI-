@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 from pathlib import Path
 
+from vuls.bot.dispatcher import TelegramDispatcher, create_dispatcher
+from vuls.bot.sender import TelegramSender
 from vuls.core.config import Settings, load_settings
 from vuls.db.client import SupabaseClient, build_supabase_client
 from vuls.db.repositories.artifacts import ArtifactRepository
@@ -15,6 +17,7 @@ from vuls.github.service import GitHubApiClientProtocol, GitHubExportService
 from vuls.llm.gateway import LLMClient, LLMGateway
 from vuls.llm.openai_client import OpenAIResponsesClient
 from vuls.memory.service import MemoryService
+from vuls.runtime.telegram_service import RuntimeTelegramFlowService
 from vuls.templates.registry import TemplateRegistry
 
 
@@ -35,6 +38,9 @@ class RuntimeContainer:
     github_client: GitHubApiClientProtocol
     github_export_service: GitHubExportService
     generation_orchestrator: ProjectGenerationOrchestrator
+    telegram_flow_service: RuntimeTelegramFlowService
+    telegram_dispatcher: TelegramDispatcher
+    telegram_sender: TelegramSender
     project_workdir: Path
     artifact_dir: Path
 
@@ -82,6 +88,18 @@ def build_runtime_container(
         artifact_dir=artifact_dir,
         zip_max_bytes=runtime_settings.zip_max_bytes,
     )
+    telegram_flow_service = RuntimeTelegramFlowService(
+        settings=runtime_settings,
+        user_repository=user_repository,
+        project_repository=project_repository,
+        memory_service=memory_service,
+        llm_gateway=llm_gateway,
+        template_registry=template_registry,
+        generation_orchestrator=generation_orchestrator,
+        github_export_service=github_export_service,
+    )
+    telegram_dispatcher = create_dispatcher(telegram_flow_service)
+    telegram_sender = TelegramSender.from_token(runtime_settings.telegram_bot_token)
 
     return RuntimeContainer(
         settings=runtime_settings,
@@ -99,6 +117,9 @@ def build_runtime_container(
         github_client=runtime_github_client,
         github_export_service=github_export_service,
         generation_orchestrator=generation_orchestrator,
+        telegram_flow_service=telegram_flow_service,
+        telegram_dispatcher=telegram_dispatcher,
+        telegram_sender=telegram_sender,
         project_workdir=runtime_settings.project_workdir,
         artifact_dir=artifact_dir,
     )

@@ -74,6 +74,9 @@ def test_build_runtime_container_wires_existing_runtime_boundaries(tmp_path: Pat
     assert container.generation_orchestrator is not None
     assert container.github_export_service is not None
     assert container.memory_service is not None
+    assert container.telegram_flow_service is not None
+    assert container.telegram_dispatcher is not None
+    assert container.telegram_sender is not None
 
 
 def test_create_api_app_loads_runtime_settings_secret_and_container(tmp_path: Path) -> None:
