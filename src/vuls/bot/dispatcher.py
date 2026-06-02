@@ -5,6 +5,8 @@ from vuls.bot.handlers.new_project import handle_new_project
 from vuls.bot.handlers.projects import handle_projects
 from vuls.bot.handlers.start import handle_start
 from vuls.bot.handlers.status import handle_status
+from vuls.bot.intent import ProjectIntentDetector
+from vuls.bot.keyboards import export_choice_keyboard
 from vuls.bot.messages import (
     BotReply,
     ProjectGenerationReply,
@@ -14,6 +16,7 @@ from vuls.bot.messages import (
     TelegramUserIdentity,
     identity_from_message,
     message_text,
+    render_intake_result,
 )
 from vuls.i18n import translate
 
@@ -42,8 +45,16 @@ class TelegramFlowService(Protocol):
 
 
 class TelegramDispatcher:
-    def __init__(self, service: TelegramFlowService) -> None:
+    def __init__(
+        self,
+        service: TelegramFlowService,
+        *,
+        intent_detector: ProjectIntentDetector | None = None,
+        bot_username: str | None = None,
+    ) -> None:
         self._service = service
+        self._intent_detector = intent_detector or ProjectIntentDetector()
+        self._bot_username = bot_username
 
     def dispatch_message(self, message: object) -> BotReply:
         text = message_text(message)
@@ -56,11 +67,22 @@ class TelegramDispatcher:
         if text.startswith("/status"):
             return handle_status(message, self._service)
         identity = identity_from_message(message)
+        intent = self._intent_detector.detect_message(message, bot_username=self._bot_username)
+        if intent.is_project_request:
+            result = self._service.start_new_project(identity, intent.idea)
+            return BotReply(
+                text=render_intake_result(result, identity.language_code),
+                keyboard=export_choice_keyboard(result.project_id, identity.language_code),
+            )
         return BotReply(text=translate("bot.new_project_help", identity.language_code))
 
     def dispatch_callback(self, callback: object) -> BotReply:
         return handle_callback(callback, self._service)
 
 
-def create_dispatcher(service: TelegramFlowService) -> TelegramDispatcher:
-    return TelegramDispatcher(service)
+def create_dispatcher(
+    service: TelegramFlowService,
+    *,
+    bot_username: str | None = None,
+) -> TelegramDispatcher:
+    return TelegramDispatcher(service, bot_username=bot_username)
