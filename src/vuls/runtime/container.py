@@ -7,6 +7,7 @@ from vuls.core.config import Settings, load_settings
 from vuls.db.client import SupabaseClient, build_supabase_client
 from vuls.db.repositories.artifacts import ArtifactRepository
 from vuls.db.repositories.audit import AuditRepository
+from vuls.db.repositories.github import GitHubRepositoryMetadataRepository
 from vuls.db.repositories.memory import MemoryRepository
 from vuls.db.repositories.projects import ProjectRepository
 from vuls.db.repositories.templates import TemplateRepository
@@ -29,6 +30,7 @@ class RuntimeContainer:
     project_repository: ProjectRepository
     memory_repository: MemoryRepository
     artifact_repository: ArtifactRepository
+    github_repository: GitHubRepositoryMetadataRepository
     template_repository: TemplateRepository
     audit_repository: AuditRepository
     memory_service: MemoryService
@@ -59,6 +61,7 @@ def build_runtime_container(
     project_repository = ProjectRepository(runtime_supabase_client)
     memory_repository = MemoryRepository(runtime_supabase_client)
     artifact_repository = ArtifactRepository(runtime_supabase_client)
+    github_repository = GitHubRepositoryMetadataRepository(runtime_supabase_client)
     template_repository = TemplateRepository(runtime_supabase_client)
     audit_repository = AuditRepository(runtime_supabase_client)
 
@@ -77,7 +80,10 @@ def build_runtime_container(
         token=runtime_settings.github_token,
         api_base_url=runtime_settings.github_api_base_url,
     )
-    github_export_service = GitHubExportService(client=runtime_github_client)
+    github_export_service = GitHubExportService(
+        client=runtime_github_client,
+        metadata_store=github_repository,
+    )
 
     artifact_dir = _default_artifact_dir(runtime_settings.project_workdir)
     generation_orchestrator = ProjectGenerationOrchestrator(
@@ -108,6 +114,7 @@ def build_runtime_container(
         project_repository=project_repository,
         memory_repository=memory_repository,
         artifact_repository=artifact_repository,
+        github_repository=github_repository,
         template_repository=template_repository,
         audit_repository=audit_repository,
         memory_service=memory_service,

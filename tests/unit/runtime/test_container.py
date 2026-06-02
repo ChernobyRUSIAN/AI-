@@ -5,7 +5,13 @@ from pydantic import BaseModel
 
 from vuls.api.app import create_api_app
 from vuls.core.config import AppEnv, Settings
-from vuls.llm.schemas import LLMClientResponse, LLMMessage
+from vuls.github.schemas import GitHubExportRequest, GitHubRepository
+from vuls.llm.schemas import (
+    GeneratedProjectFile,
+    GeneratedProjectManifest,
+    LLMClientResponse,
+    LLMMessage,
+)
 from vuls.main import create_app
 from vuls.runtime.container import build_runtime_container
 
@@ -27,6 +33,10 @@ class FakeLLMClient:
 
 
 class FakeGitHubClient:
+    def __init__(self) -> None:
+        self.created_repositories: list[dict[str, object]] = []
+        self.files: list[str] = []
+
     def create_repository(
         self,
         *,
@@ -35,8 +45,22 @@ class FakeGitHubClient:
         private: bool,
         description: str,
         default_branch: str,
-    ) -> object:
-        raise AssertionError("Unexpected GitHub repository creation during container build")
+    ) -> GitHubRepository:
+        self.created_repositories.append(
+            {
+                "owner": owner,
+                "repo_name": repo_name,
+                "private": private,
+                "description": description,
+                "default_branch": default_branch,
+            }
+        )
+        return GitHubRepository(
+            owner=owner,
+            repo_name=repo_name,
+            html_url=f"https://github.com/{owner}/{repo_name}",
+            default_branch=default_branch,
+        )
 
     def put_file(
         self,
@@ -48,7 +72,35 @@ class FakeGitHubClient:
         message: str,
         branch: str,
     ) -> str:
-        raise AssertionError("Unexpected GitHub file write during container build")
+        self.files.append(path)
+        return f"sha-{len(self.files)}"
+
+
+class FakeResult:
+    def __init__(self, data: object) -> None:
+        self.data = data
+
+
+class FakeQuery:
+    def __init__(self) -> None:
+        self.calls: list[tuple[str, object]] = []
+
+    def upsert(self, payload: dict[str, object], on_conflict: str | None = None) -> "FakeQuery":
+        self.calls.append(("upsert", (payload, on_conflict)))
+        return self
+
+    def execute(self) -> FakeResult:
+        return FakeResult([{"id": "repository-1"}])
+
+
+class FakeRepositoryMetadataSupabaseClient:
+    def __init__(self) -> None:
+        self.tables: list[str] = []
+        self.query = FakeQuery()
+
+    def table(self, table_name: str) -> FakeQuery:
+        self.tables.append(table_name)
+        return self.query
 
 
 def test_build_runtime_container_wires_existing_runtime_boundaries(tmp_path: Path) -> None:
@@ -73,6 +125,7 @@ def test_build_runtime_container_wires_existing_runtime_boundaries(tmp_path: Pat
     assert container.artifact_dir == tmp_path / "artifacts"
     assert container.generation_orchestrator is not None
     assert container.github_export_service is not None
+    assert container.github_repository is not None
     assert container.memory_service is not None
     assert container.telegram_flow_service is not None
     assert container.telegram_dispatcher is not None
@@ -119,6 +172,57 @@ def test_main_create_app_uses_routed_api_app(tmp_path: Path) -> None:
 
     assert response.status_code == 200
     assert response.json()["version"] == "v1.0"
+
+
+def test_runtime_container_wires_github_export_metadata_store(tmp_path: Path) -> None:
+    supabase_client = FakeRepositoryMetadataSupabaseClient()
+    github_client = FakeGitHubClient()
+    container = build_runtime_container(
+        settings=runtime_settings(tmp_path),
+        supabase_client=supabase_client,
+        llm_client=FakeLLMClient(),
+        github_client=github_client,
+    )
+
+    result = container.github_export_service.export_project(
+        GitHubExportRequest(
+            project_id="11111111-1111-1111-1111-111111111111",
+            owner="acme",
+            repo_name="Coffee CRM",
+            manifest=GeneratedProjectManifest(
+                project_name="coffee-crm",
+                readme_summary="CRM for a small coffee shop.",
+                tech_stack=["FastAPI", "React"],
+                files=[
+                    GeneratedProjectFile(
+                        path="README.md",
+                        content="# Coffee CRM\n",
+                        purpose="Project documentation",
+                    )
+                ],
+            ),
+            private=True,
+        )
+    )
+
+    assert result.html_url == "https://github.com/acme/coffee-crm"
+    assert supabase_client.tables == ["repositories"]
+    assert supabase_client.query.calls == [
+        (
+            "upsert",
+            (
+                {
+                    "project_id": "11111111-1111-1111-1111-111111111111",
+                    "provider": "github",
+                    "owner": "acme",
+                    "repo_name": "coffee-crm",
+                    "html_url": "https://github.com/acme/coffee-crm",
+                    "default_branch": "main",
+                },
+                "project_id",
+            ),
+        )
+    ]
 
 
 def runtime_settings(
