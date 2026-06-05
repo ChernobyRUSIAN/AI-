@@ -9,6 +9,7 @@
   "bot.intake.clarifying_questions": "Netleştirme soruları:",
   "bot.intake.question_line": "{index}. {question}",
   "bot.generation.completed": "{project_id} projesi tamamlandı.",
+  "bot.generation.failed": "{project_id} projesi güvenli şekilde tamamlanamadı. Lütfen tekrar deneyin veya isteği netleştirin.",
   "bot.generation.template": "Şablon: {template}",
   "bot.generation.github_url": "GitHub deposu: {url}",
   "bot.generation.zip_artifact": "ZIP çıktısı: {artifact_id}",

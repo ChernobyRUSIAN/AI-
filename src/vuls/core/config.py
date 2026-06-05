@@ -27,7 +27,9 @@ class Settings(BaseSettings):
     supabase_service_role_key: str
     supabase_storage_bucket: str
     openai_api_key: str
+    openai_base_url: str = "https://api.openai.com/v1"
     openai_model: str
+    openai_fallback_models: str = ""
     github_token: str
     github_owner: str
     github_default_private: bool = True
@@ -43,3 +45,16 @@ class Settings(BaseSettings):
 
 def load_settings() -> Settings:
     return Settings()  # type: ignore[call-arg]
+
+
+def openai_model_sequence(settings: Settings) -> tuple[str, ...]:
+    models: list[str] = []
+    for model in (settings.openai_model, *_split_csv(settings.openai_fallback_models)):
+        normalized = model.strip()
+        if normalized and normalized not in models:
+            models.append(normalized)
+    return tuple(models)
+
+
+def _split_csv(value: str) -> tuple[str, ...]:
+    return tuple(part.strip() for part in value.split(",") if part.strip())

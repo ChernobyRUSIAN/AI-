@@ -38,6 +38,7 @@ def test_validation_requires_runtime_components_for_startup() -> None:
         llm_gateway=object(),
         generation_orchestrator=object(),
         github_export_service=object(),
+        project_service=object(),
         telegram_flow_service=object(),
         telegram_dispatcher=object(),
     )
@@ -63,6 +64,7 @@ def test_validation_accepts_complete_runtime_wiring() -> None:
         llm_gateway=object(),
         generation_orchestrator=object(),
         github_export_service=object(),
+        project_service=object(),
         telegram_flow_service=object(),
         telegram_dispatcher=object(),
         telegram_sender=object(),

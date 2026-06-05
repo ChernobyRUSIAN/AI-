@@ -1,5 +1,6 @@
 from pathlib import Path
 
+import pytest
 from fastapi.testclient import TestClient
 from pydantic import BaseModel
 
@@ -104,6 +105,28 @@ class FakeRepositoryMetadataSupabaseClient:
         return self.query
 
 
+class FakeConfiguredOpenAIResponsesClient:
+    def __init__(
+        self,
+        *,
+        api_key: str,
+        base_url: str,
+        timeout_seconds: int,
+    ) -> None:
+        self.api_key = api_key
+        self.base_url = base_url
+        self.timeout_seconds = timeout_seconds
+
+    def complete_json(
+        self,
+        *,
+        model: str,
+        messages: list[LLMMessage],
+        response_schema: type[BaseModel],
+    ) -> LLMClientResponse:
+        raise AssertionError("Unexpected LLM call during container build")
+
+
 def test_build_runtime_container_wires_existing_runtime_boundaries(tmp_path: Path) -> None:
     settings = runtime_settings(tmp_path)
     supabase_client = FakeSupabaseClient()
@@ -128,9 +151,34 @@ def test_build_runtime_container_wires_existing_runtime_boundaries(tmp_path: Pat
     assert container.github_export_service is not None
     assert container.github_repository is not None
     assert container.memory_service is not None
+    assert container.project_service is not None
     assert container.telegram_flow_service is not None
     assert container.telegram_dispatcher is not None
     assert container.telegram_sender is not None
+
+
+def test_build_runtime_container_passes_openai_base_url(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.setattr(
+        "vuls.runtime.container.OpenAIResponsesClient",
+        FakeConfiguredOpenAIResponsesClient,
+    )
+
+    container = build_runtime_container(
+        settings=runtime_settings(
+            tmp_path,
+            openai_base_url="https://openrouter.ai/api/v1",
+        ),
+        supabase_client=FakeSupabaseClient(),
+        github_client=FakeGitHubClient(),
+    )
+
+    assert isinstance(container.llm_client, FakeConfiguredOpenAIResponsesClient)
+    assert container.llm_client.api_key == "openai-key"
+    assert container.llm_client.base_url == "https://openrouter.ai/api/v1"
+    assert container.llm_client.timeout_seconds == 60
 
 
 def test_create_api_app_loads_runtime_settings_secret_and_container(tmp_path: Path) -> None:
@@ -243,6 +291,7 @@ def runtime_settings(
     tmp_path: Path,
     *,
     telegram_webhook_secret: str = "telegram-webhook-secret",
+    openai_base_url: str = "https://api.openai.com/v1",
 ) -> Settings:
     return Settings(
         app_env=AppEnv.LOCAL,
@@ -254,6 +303,7 @@ def runtime_settings(
         supabase_service_role_key="supabase-service-role",
         supabase_storage_bucket="vuls-artifacts",
         openai_api_key="openai-key",
+        openai_base_url=openai_base_url,
         openai_model="gpt-5.1",
         github_token="github-token",
         github_owner="vuls",

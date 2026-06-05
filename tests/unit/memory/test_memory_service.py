@@ -2,6 +2,7 @@ from typing import Any
 
 from vuls.db.client import JsonObject
 from vuls.db.models import MemorySource, MemoryType
+from vuls.db.repositories.memory import MemoryRepositoryTransientError
 from vuls.memory.schemas import ConversationMessage
 from vuls.memory.service import MemoryService
 
@@ -46,6 +47,21 @@ class FakeMemoryRepository:
         }
         self.writes.append(row)
         return row
+
+
+class FailingMemoryRepository(FakeMemoryRepository):
+    def write_memory(
+        self,
+        *,
+        profile_id: str,
+        project_id: str | None,
+        memory_type: MemoryType,
+        source: MemorySource,
+        content: dict[str, Any],
+        summary: str,
+        confidence: float = 1.0,
+    ) -> JsonObject:
+        raise MemoryRepositoryTransientError("Supabase memory_items insert failed")
 
 
 def memory_row(
@@ -231,6 +247,28 @@ def test_record_project_goal_stores_goal_separately_from_chat_history() -> None:
             "confidence": 0.9,
         }
     ]
+
+
+def test_memory_write_transient_failure_returns_unsaved_fact_without_raising() -> None:
+    repository = FailingMemoryRepository({})
+    service = MemoryService(repository)
+
+    fact = service.record_project_goal(
+        profile_id="profile-1",
+        project_id="project-1",
+        goal="Build a CRM for a car wash.",
+    )
+
+    assert fact.id is None
+    assert fact.profile_id == "profile-1"
+    assert fact.project_id == "project-1"
+    assert fact.memory_type == MemoryType.PROJECT
+    assert fact.source == MemorySource.TELEGRAM
+    assert fact.content == {
+        "category": "project_goal",
+        "goal": "Build a CRM for a car wash.",
+    }
+    assert fact.summary == "Build a CRM for a car wash."
 
 
 def test_record_extracted_requirement_stores_requirement_separately_from_raw_messages() -> None:

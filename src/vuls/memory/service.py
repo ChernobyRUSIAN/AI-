@@ -1,8 +1,10 @@
+import logging
 from collections.abc import Mapping
 from typing import Any, Protocol
 
 from vuls.db.client import JsonObject
 from vuls.db.models import MemorySource, MemoryType
+from vuls.db.repositories.memory import MemoryRepositoryTransientError
 from vuls.memory.schemas import (
     ConversationMemory,
     ConversationMessage,
@@ -16,6 +18,8 @@ from vuls.memory.schemas import (
     UserMemorySnapshot,
 )
 from vuls.memory.summarizer import summarize_conversation
+
+LOGGER = logging.getLogger(__name__)
 
 
 class MemoryRepositoryProtocol(Protocol):
@@ -92,15 +96,35 @@ class MemoryService:
         summary: str,
         confidence: float = 1.0,
     ) -> MemoryFact:
-        row = self._repository.write_memory(
-            profile_id=profile_id,
-            project_id=project_id,
-            memory_type=memory_type,
-            source=source,
-            content=dict(content),
-            summary=summary,
-            confidence=confidence,
-        )
+        content_payload = dict(content)
+        try:
+            row = self._repository.write_memory(
+                profile_id=profile_id,
+                project_id=project_id,
+                memory_type=memory_type,
+                source=source,
+                content=content_payload,
+                summary=summary,
+                confidence=confidence,
+            )
+        except MemoryRepositoryTransientError:
+            LOGGER.warning(
+                "Continuing without durable memory write after transient failure: "
+                "profile_id=%s project_id=%s memory_type=%s",
+                profile_id,
+                project_id,
+                memory_type.value,
+            )
+            row = {
+                "id": None,
+                "profile_id": profile_id,
+                "project_id": project_id,
+                "memory_type": memory_type.value,
+                "source": source.value,
+                "content": content_payload,
+                "summary": summary,
+                "confidence": confidence,
+            }
         return _memory_from_row(row, expected_type=memory_type)
 
     def record_project_goal(

@@ -41,6 +41,31 @@ def test_each_template_has_prompt_and_file_blueprints(template_key: str) -> None
     assert all(file.purpose for file in template.file_blueprint.files)
 
 
+def test_crm_template_declares_next_app_router_mvp_blueprint() -> None:
+    template = TemplateRegistry().get("crm")
+    paths = {file.path for file in template.file_blueprint.files}
+
+    assert {
+        "package.json",
+        "tsconfig.json",
+        "tailwind.config.ts",
+        "schema.sql",
+        "env.example",
+        "src/app/layout.tsx",
+        "src/app/globals.css",
+        "src/app/dashboard/page.tsx",
+        "src/app/customers/actions.ts",
+        "src/app/customers/page.tsx",
+        "src/app/orders/actions.ts",
+        "src/app/orders/page.tsx",
+        "src/app/tasks/actions.ts",
+        "src/app/tasks/page.tsx",
+        "src/lib/database.types.ts",
+        "src/lib/supabase.ts",
+    }.issubset(paths)
+    assert "deals" not in template.default_pages
+
+
 def test_registry_validation_reports_no_catalog_errors() -> None:
     registry = TemplateRegistry()
 

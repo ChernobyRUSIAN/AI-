@@ -138,6 +138,14 @@ def render_intake_result(result: ProjectIntakeResult, language_code: str = "en")
 
 
 def render_generation_reply(result: ProjectGenerationReply, language_code: str = "en") -> str:
+    if result.status == "failed":
+        return "\n".join(
+            [
+                translate("bot.generation.failed", language_code, project_id=result.project_id),
+                translate("bot.generation.template", language_code, template=result.template),
+            ]
+        )
+
     lines = [
         translate("bot.generation.completed", language_code, project_id=result.project_id),
         translate("bot.generation.template", language_code, template=result.template),

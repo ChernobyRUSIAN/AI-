@@ -9,6 +9,7 @@
   "bot.intake.clarifying_questions": "Perguntas de esclarecimento:",
   "bot.intake.question_line": "{index}. {question}",
   "bot.generation.completed": "Projeto {project_id} concluído.",
+  "bot.generation.failed": "O projeto {project_id} não pôde ser concluído com segurança. Tente novamente ou refine a solicitação.",
   "bot.generation.template": "Template: {template}",
   "bot.generation.github_url": "Repositório GitHub: {url}",
   "bot.generation.zip_artifact": "Artefato ZIP: {artifact_id}",

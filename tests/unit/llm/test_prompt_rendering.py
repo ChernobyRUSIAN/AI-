@@ -50,3 +50,39 @@ def test_project_manifest_prompt_includes_template_rules_and_output_shape() -> N
     assert "default_entities" in messages[1].content
     assert "readme_summary" in messages[1].content
     assert "env_vars" in messages[1].content
+
+
+def test_crm_manifest_prompt_requires_real_nextjs_mvp_pages() -> None:
+    template = TemplateRegistry().get("crm")
+    request = ProjectManifestRequest(
+        template=template,
+        brief=ProjectBrief(
+            title="Car Wash CRM",
+            goal="Build a CRM for a car wash.",
+            target_users=["owner", "staff"],
+            must_have_features=["dashboard", "customers", "orders", "tasks"],
+            language_code="en",
+        ),
+    )
+
+    prompt = build_project_manifest_prompt(request)[1].content
+
+    assert "Next.js App Router" in prompt
+    assert "TypeScript" in prompt
+    assert "Tailwind" in prompt
+    assert "src/app/dashboard/page.tsx" in prompt
+    assert "src/app/customers/page.tsx" in prompt
+    assert "src/app/orders/page.tsx" in prompt
+    assert "src/app/tasks/page.tsx" in prompt
+    assert "schema.sql" in prompt
+    assert "env.example" in prompt
+    assert "src/lib/supabase.ts" in prompt
+    assert "Do not create placeholder pages" in prompt
+    assert "Never import from next/router" in prompt
+    assert "next/navigation" in prompt
+    assert "Supabase" in prompt
+    assert "CRUD" in prompt
+    assert "customer list" in prompt
+    assert "add-customer form" in prompt
+    assert "order status" in prompt
+    assert "src/lib/mock-data.ts" not in prompt

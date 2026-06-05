@@ -1,3 +1,4 @@
+import logging
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
@@ -5,6 +6,8 @@ from typing import Any, Protocol
 
 from vuls.db.client import JsonObject
 from vuls.db.models import ArtifactType
+from vuls.db.repositories.artifacts import ArtifactRepositoryTransientError
+from vuls.generation.crm_mvp import ensure_crm_next_mvp_manifest
 from vuls.generation.project_builder import ProjectBuildResult, build_project_workspace
 from vuls.generation.zip_exporter import ZipExportResult, export_workspace_zip
 from vuls.llm.schemas import (
@@ -13,6 +16,8 @@ from vuls.llm.schemas import (
     ProjectManifestResponse,
 )
 from vuls.templates.registry import TemplateRegistry
+
+LOGGER = logging.getLogger(__name__)
 
 
 class ProjectManifestGateway(Protocol):
@@ -40,8 +45,8 @@ class ProjectGenerationResult:
     template_key: str
     build: ProjectBuildResult
     zip_export: ZipExportResult
-    manifest_artifact_id: str
-    zip_artifact_id: str
+    manifest_artifact_id: str | None
+    zip_artifact_id: str | None
 
     @property
     def manifest(self) -> object:
@@ -91,31 +96,36 @@ class ProjectGenerationOrchestrator:
                 memory_context=memory_context or {},
             )
         )
-        build = build_project_workspace(
+        manifest = ensure_crm_next_mvp_manifest(
             manifest=manifest_response.manifest,
+            template_key=template_key,
+            brief=brief,
+        )
+        build = build_project_workspace(
+            manifest=manifest,
             project_workdir=self._project_workdir,
         )
         zip_export = export_workspace_zip(
             workspace_path=build.workspace_path,
             output_dir=self._artifact_dir,
-            project_name=manifest_response.manifest.project_name,
+            project_name=manifest.project_name,
             max_bytes=self._zip_max_bytes,
         )
 
-        manifest_artifact = self._artifact_repository.create_artifact(
+        manifest_artifact_id = self._create_artifact_best_effort(
             project_id=project_id,
             generation_run_id=generation_run_id,
             artifact_type=ArtifactType.MANIFEST,
-            content=manifest_response.manifest.model_dump(mode="json"),
+            content=manifest.model_dump(mode="json"),
         )
-        zip_artifact = self._artifact_repository.create_artifact(
+        zip_artifact_id = self._create_artifact_best_effort(
             project_id=project_id,
             generation_run_id=generation_run_id,
             artifact_type=ArtifactType.ZIP,
             storage_path=str(zip_export.zip_path),
             content={
                 "size_bytes": zip_export.size_bytes,
-                "project_name": manifest_response.manifest.project_name,
+                "project_name": manifest.project_name,
             },
         )
 
@@ -124,6 +134,34 @@ class ProjectGenerationOrchestrator:
             template_key=template_key,
             build=build,
             zip_export=zip_export,
-            manifest_artifact_id=str(manifest_artifact["id"]),
-            zip_artifact_id=str(zip_artifact["id"]),
+            manifest_artifact_id=manifest_artifact_id,
+            zip_artifact_id=zip_artifact_id,
         )
+
+    def _create_artifact_best_effort(
+        self,
+        *,
+        project_id: str,
+        artifact_type: ArtifactType,
+        generation_run_id: str | None = None,
+        storage_path: str | None = None,
+        content: Mapping[str, Any] | None = None,
+    ) -> str | None:
+        try:
+            artifact = self._artifact_repository.create_artifact(
+                project_id=project_id,
+                generation_run_id=generation_run_id,
+                artifact_type=artifact_type,
+                storage_path=storage_path,
+                content=content,
+            )
+        except ArtifactRepositoryTransientError:
+            LOGGER.warning(
+                "Artifact persistence failed after retries; continuing generation. "
+                "project_id=%s artifact_type=%s",
+                project_id,
+                artifact_type.value,
+                exc_info=True,
+            )
+            return None
+        return str(artifact["id"])

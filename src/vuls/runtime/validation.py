@@ -30,6 +30,7 @@ REQUIRED_RUNTIME_COMPONENTS = (
     "llm_gateway",
     "generation_orchestrator",
     "github_export_service",
+    "project_service",
     "telegram_flow_service",
     "telegram_dispatcher",
     "telegram_sender",

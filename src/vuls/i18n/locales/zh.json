@@ -9,6 +9,7 @@
   "bot.intake.clarifying_questions": "澄清问题：",
   "bot.intake.question_line": "{index}. {question}",
   "bot.generation.completed": "项目 {project_id} 已完成。",
+  "bot.generation.failed": "项目 {project_id} 无法安全完成。请重试或优化请求。",
   "bot.generation.template": "模板：{template}",
   "bot.generation.github_url": "GitHub 仓库：{url}",
   "bot.generation.zip_artifact": "ZIP 构件：{artifact_id}",

@@ -21,6 +21,12 @@ from vuls.llm.schemas import (
     ProjectBrief,
 )
 from vuls.memory.schemas import MemoryContext
+from vuls.product_intelligence import (
+    ProductIntelligence,
+    build_product_intelligence,
+    load_product_intelligence,
+    product_intelligence_prompt_items,
+)
 from vuls.templates.schemas import TemplateSelection
 
 
@@ -205,6 +211,7 @@ class RuntimeTelegramFlowService:
                 profile_id=profile_id,
                 project_id=project_id,
             ).to_prompt_context()
+            memory_context = _with_product_memory(project=project, memory_context=memory_context)
             generation = self._generation_orchestrator.generate_project(
                 project_id=project_id,
                 generation_run_id=None,
@@ -305,12 +312,41 @@ def _project_brief_payload(
     brief: ProjectBrief,
     selection: TemplateSelection,
 ) -> dict[str, Any]:
+    intelligence = build_product_intelligence(
+        raw_idea=raw_idea,
+        brief=brief,
+        selected_template_key=selection.selected_key,
+    )
     return {
         "raw_idea": raw_idea,
         "normalized_brief": brief.model_dump(mode="json"),
         "selected_template_key": selection.selected_key,
         "template_confidence": selection.confidence,
+        **intelligence.to_project_brief_payload(),
     }
+
+
+def _with_product_memory(
+    *,
+    project: Mapping[str, Any],
+    memory_context: dict[str, list[str]],
+) -> dict[str, list[str]]:
+    augmented = {key: list(value) for key, value in memory_context.items()}
+    project_items = augmented.setdefault("project", [])
+    project_items.extend(
+        product_intelligence_prompt_items(_product_intelligence_from_project(project))
+    )
+    return augmented
+
+
+def _product_intelligence_from_project(project: Mapping[str, Any]) -> ProductIntelligence:
+    payload = _brief_mapping(project)
+    return load_product_intelligence(
+        payload=payload,
+        raw_idea=str(payload.get("raw_idea", project.get("title", "Build a product"))),
+        brief=_brief_from_project(project),
+        selected_template_key=_template_key(project),
+    )
 
 
 def _brief_from_project(project: Mapping[str, Any]) -> ProjectBrief:

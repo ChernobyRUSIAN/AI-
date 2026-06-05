@@ -12,9 +12,11 @@ class FakeGitHubClient:
         self,
         *,
         conflicts: set[str] | None = None,
+        api_conflicts: set[str] | None = None,
         fail_on_put: GitHubApiError | None = None,
     ) -> None:
         self.conflicts = conflicts or set()
+        self.api_conflicts = api_conflicts or set()
         self.fail_on_put = fail_on_put
         self.created_repositories: list[dict[str, object]] = []
         self.committed_files: list[dict[str, object]] = []
@@ -39,6 +41,12 @@ class FakeGitHubClient:
         )
         if repo_name in self.conflicts:
             raise GitHubNameConflict(f"Repository already exists: {repo_name}")
+        if repo_name in self.api_conflicts:
+            raise GitHubApiError(
+                'GitHub API returned HTTP 422. Response body: {"message": '
+                '"name already exists on this account"}',
+                status_code=422,
+            )
         return GitHubRepository(
             owner=owner,
             repo_name=repo_name,
@@ -98,9 +106,13 @@ class FakeRepositoryMetadataStore:
 
 
 def sample_manifest() -> GeneratedProjectManifest:
+    return manifest_with_summary("CRM for a small coffee shop.")
+
+
+def manifest_with_summary(readme_summary: str) -> GeneratedProjectManifest:
     return GeneratedProjectManifest(
         project_name="coffee-crm",
-        readme_summary="CRM for a small coffee shop.",
+        readme_summary=readme_summary,
         tech_stack=["FastAPI", "React"],
         files=[
             GeneratedProjectFile(
@@ -156,9 +168,12 @@ def test_export_project_creates_repository_commits_files_and_returns_url() -> No
     ]
 
 
-def test_export_project_retries_name_conflict_with_deterministic_suffix() -> None:
+def test_export_project_retries_name_conflict_with_timestamp_suffix() -> None:
     client = FakeGitHubClient(conflicts={"coffee-crm"})
-    service = GitHubExportService(client=client)
+    service = GitHubExportService(
+        client=client,
+        name_suffix_factory=lambda: "20260603123456",
+    )
 
     result = service.export_project(
         GitHubExportRequest(
@@ -169,12 +184,118 @@ def test_export_project_retries_name_conflict_with_deterministic_suffix() -> Non
         )
     )
 
-    assert result.repo_name == "coffee-crm-2"
+    assert result.repo_name == "coffee-crm-20260603123456"
     assert [call["repo_name"] for call in client.created_repositories] == [
         "coffee-crm",
-        "coffee-crm-2",
+        "coffee-crm-20260603123456",
     ]
-    assert {call["repo_name"] for call in client.committed_files} == {"coffee-crm-2"}
+    assert {call["repo_name"] for call in client.committed_files} == {
+        "coffee-crm-20260603123456"
+    }
+
+
+def test_export_project_retries_github_api_name_already_exists_response() -> None:
+    client = FakeGitHubClient(api_conflicts={"coffee-crm"})
+    service = GitHubExportService(
+        client=client,
+        name_suffix_factory=lambda: "20260603123456",
+    )
+
+    result = service.export_project(
+        GitHubExportRequest(
+            project_id="project-1",
+            owner="acme",
+            repo_name="Coffee CRM",
+            manifest=sample_manifest(),
+        )
+    )
+
+    assert result.repo_name == "coffee-crm-20260603123456"
+    assert [call["repo_name"] for call in client.created_repositories] == [
+        "coffee-crm",
+        "coffee-crm-20260603123456",
+    ]
+
+
+def test_export_project_reports_attempted_names_when_all_retries_conflict(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    client = FakeGitHubClient(
+        conflicts={
+            "coffee-crm",
+            "coffee-crm-20260603123456",
+            "coffee-crm-20260603123456-3",
+        }
+    )
+    service = GitHubExportService(
+        client=client,
+        max_name_attempts=3,
+        name_suffix_factory=lambda: "20260603123456",
+    )
+
+    with caplog.at_level("WARNING"), pytest.raises(GitHubExportError) as exc_info:
+        service.export_project(
+            GitHubExportRequest(
+                project_id="project-1",
+                owner="acme",
+                repo_name="Coffee CRM",
+                manifest=sample_manifest(),
+            )
+        )
+
+    error_message = str(exc_info.value)
+    assert "base_repo_name=coffee-crm" in error_message
+    assert "max_name_attempts=3" in error_message
+    assert "coffee-crm" in error_message
+    assert "coffee-crm-20260603123456" in error_message
+    assert "coffee-crm-20260603123456-3" in error_message
+    assert "base_repo_name=coffee-crm" in caplog.text
+    assert "attempted_name=coffee-crm" in caplog.text
+    assert "attempted_name=coffee-crm-20260603123456" in caplog.text
+    assert "attempted_name=coffee-crm-20260603123456-3" in caplog.text
+    assert "max_name_attempts=3" in caplog.text
+    assert [call["repo_name"] for call in client.created_repositories] == [
+        "coffee-crm",
+        "coffee-crm-20260603123456",
+        "coffee-crm-20260603123456-3",
+    ]
+
+
+def test_export_project_trims_overlong_repository_description() -> None:
+    client = FakeGitHubClient()
+    service = GitHubExportService(client=client)
+    overlong_description = "A" * 375
+
+    service.export_project(
+        GitHubExportRequest(
+            project_id="project-1",
+            owner="acme",
+            repo_name="Coffee CRM",
+            manifest=sample_manifest(),
+            description=overlong_description,
+        )
+    )
+
+    description = client.created_repositories[0]["description"]
+    assert isinstance(description, str)
+    assert description == "A" * 350
+    assert len(description) == 350
+
+
+def test_export_project_removes_control_characters_from_repository_description() -> None:
+    client = FakeGitHubClient()
+    service = GitHubExportService(client=client)
+
+    service.export_project(
+        GitHubExportRequest(
+            project_id="project-1",
+            owner="acme",
+            repo_name="Coffee CRM",
+            manifest=manifest_with_summary("CRM\nfor\r\nsmall\tcoffee\x00shop"),
+        )
+    )
+
+    assert client.created_repositories[0]["description"] == "CRM for smallcoffeeshop"
 
 
 def test_export_project_sanitizes_api_failures() -> None:

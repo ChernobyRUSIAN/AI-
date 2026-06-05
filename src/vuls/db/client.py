@@ -38,6 +38,7 @@ class SupabaseClient(Protocol):
 
 
 JsonObject = dict[str, Any]
+SUPABASE_HTTP_TIMEOUT_SECONDS = 120
 
 
 def build_supabase_client(settings: Settings) -> SupabaseClient:
@@ -46,10 +47,27 @@ def build_supabase_client(settings: Settings) -> SupabaseClient:
     except ImportError as exc:
         raise RuntimeError("Install the Supabase Python client before running Vuls.") from exc
 
+    try:
+        httpx_module = import_module("httpx")
+    except ImportError as exc:
+        raise RuntimeError("Install HTTPX before running Vuls.") from exc
+
     create_client = cast(Any, supabase_module).create_client
+    client_options = cast(Any, supabase_module).ClientOptions
+    httpx_client = cast(Any, httpx_module).Client(
+        timeout=SUPABASE_HTTP_TIMEOUT_SECONDS,
+        trust_env=False,
+    )
     return cast(
         SupabaseClient,
-        create_client(settings.supabase_url, settings.supabase_service_role_key),
+        create_client(
+            settings.supabase_url,
+            settings.supabase_service_role_key,
+            client_options(
+                postgrest_client_timeout=SUPABASE_HTTP_TIMEOUT_SECONDS,
+                httpx_client=httpx_client,
+            ),
+        ),
     )
 
 

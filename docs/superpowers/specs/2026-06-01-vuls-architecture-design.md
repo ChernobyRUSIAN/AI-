@@ -1,8 +1,6 @@
 # Vuls Architecture and Product Specification v1.0
 
-Дата: 2026-06-01
-Статус: Final Architecture v1.0
-Владелец продукта: Vuls
+Дата: 2026-06-01 Статус: Final Architecture v1.0 Владелец продукта: Vuls
 
 ## 1. Vision
 
@@ -89,14 +87,16 @@ Telegram лучше веб-интерфейса для v1.0, потому что
 
 ### 3.3 Differentiation from Base44
 
-| Area | Base44-like tools | Vuls v1.0 |
-| --- | --- | --- |
-| Entry point | Web app/editor | Telegram chat |
-| Output ownership | Often platform-centric | ZIP or GitHub Repo from MVP |
-| Memory | Product/session-specific | User, project, conversation and knowledge memory |
-| Speed | General generation | Template-first generation |
-| Extensibility | Platform-defined | Adapter-based architecture |
-| Best first user | Web builder users | Telegram-native founders, creators, agencies |
+
+| Area             | Base44-like tools        | Vuls v1.0                                        |
+| ---------------- | ------------------------ | ------------------------------------------------ |
+| Entry point      | Web app/editor           | Telegram chat                                    |
+| Output ownership | Often platform-centric   | ZIP or GitHub Repo from MVP                      |
+| Memory           | Product/session-specific | User, project, conversation and knowledge memory |
+| Speed            | General generation       | Template-first generation                        |
+| Extensibility    | Platform-defined         | Adapter-based architecture                       |
+| Best first user  | Web builder users        | Telegram-native founders, creators, agencies     |
+
 
 ### 3.4 Monetization
 
@@ -135,6 +135,8 @@ flowchart LR
   GitHub --> Bot
   Zip --> Bot
 ```
+
+
 
 Required v1.0 capabilities:
 
@@ -250,25 +252,29 @@ flowchart LR
   Preview --> Telegram
 ```
 
+
+
 ### 6.1 Core Modules
 
-| Module | Responsibility | Replaceable By |
-| --- | --- | --- |
-| Bot Gateway | Telegram update intake, commands, message routing | Web UI, Slack, Discord |
-| Orchestrator | Owns sessions, state machine, task lifecycle | Temporal, Durable Objects, custom workflow engine |
-| Workflow Engine | Runs Vuls stages sequentially | BullMQ, Celery, Hatchet, Temporal |
-| Memory Layer | User, project, conversation and knowledge memory | Vector DB, custom Postgres memory, external memory service |
-| Template System | Product templates and code blueprints | Custom registry, marketplace templates |
-| Hermes Adapter | Optional agent planning and task decomposition | LangGraph, OpenAI Agents SDK, custom planner |
-| Open Design Adapter | Optional UI/UX generation | Figma plugin, custom design agent, v0-like generator |
-| LLM Gateway | Provider/model routing, prompts, budget | OpenAI, OpenRouter, Anthropic, local models |
-| Project Builder | Creates file tree and code patches | Codex, custom code agent |
-| Sandbox Runner | Executes untrusted code safely | Docker, Firecracker, Vercel Sandbox, E2B |
-| Code Interpreter | Runs scripts, tests, small analysis jobs | Python runner, Node runner, container executor |
-| QA Pipeline | Playwright, ESLint, Prettier, tests | Cypress, Biome, custom validators |
-| GitHub Adapter | Repo creation, commits, branches, PRs | GitLab, Gitea, local Git |
-| Deployment Adapter | Preview and production deploys | Vercel, Fly.io, Render, Docker host |
-| Supabase Repository | Persistent state and storage | Neon/Postgres + S3 + Auth provider |
+
+| Module              | Responsibility                                    | Replaceable By                                             |
+| ------------------- | ------------------------------------------------- | ---------------------------------------------------------- |
+| Bot Gateway         | Telegram update intake, commands, message routing | Web UI, Slack, Discord                                     |
+| Orchestrator        | Owns sessions, state machine, task lifecycle      | Temporal, Durable Objects, custom workflow engine          |
+| Workflow Engine     | Runs Vuls stages sequentially                     | BullMQ, Celery, Hatchet, Temporal                          |
+| Memory Layer        | User, project, conversation and knowledge memory  | Vector DB, custom Postgres memory, external memory service |
+| Template System     | Product templates and code blueprints             | Custom registry, marketplace templates                     |
+| Hermes Adapter      | Optional agent planning and task decomposition    | LangGraph, OpenAI Agents SDK, custom planner               |
+| Open Design Adapter | Optional UI/UX generation                         | Figma plugin, custom design agent, v0-like generator       |
+| LLM Gateway         | Provider/model routing, prompts, budget           | OpenAI, OpenRouter, Anthropic, local models                |
+| Project Builder     | Creates file tree and code patches                | Codex, custom code agent                                   |
+| Sandbox Runner      | Executes untrusted code safely                    | Docker, Firecracker, Vercel Sandbox, E2B                   |
+| Code Interpreter    | Runs scripts, tests, small analysis jobs          | Python runner, Node runner, container executor             |
+| QA Pipeline         | Playwright, ESLint, Prettier, tests               | Cypress, Biome, custom validators                          |
+| GitHub Adapter      | Repo creation, commits, branches, PRs             | GitLab, Gitea, local Git                                   |
+| Deployment Adapter  | Preview and production deploys                    | Vercel, Fly.io, Render, Docker host                        |
+| Supabase Repository | Persistent state and storage                      | Neon/Postgres + S3 + Auth provider                         |
+
 
 ### 6.2 Stage State Machine
 
@@ -296,6 +302,8 @@ stateDiagram-v2
   Completed --> [*]
 ```
 
+
+
 The state machine enforces the Vuls Core Rules:
 
 - no UI before architecture;
@@ -307,13 +315,15 @@ The state machine enforces the Vuls Core Rules:
 
 ### 7.1 Agent Roles
 
-| Agent | Purpose | Input | Output |
-| --- | --- | --- | --- |
-| Intake Agent | Normalizes Telegram text into structured brief | Telegram message | Project brief |
-| Requirements Agent | Finds missing constraints | Brief, user context | Requirements checklist |
-| Template Agent | Selects the best product template | Requirements, memory | Template choice |
-| Generator Agent | Generates the project from template and requirements | Template, brief, memory | Project files |
-| Repository Agent | Creates ZIP or GitHub Repo | Project files | Download/repo link |
+
+| Agent              | Purpose                                              | Input                   | Output                 |
+| ------------------ | ---------------------------------------------------- | ----------------------- | ---------------------- |
+| Intake Agent       | Normalizes Telegram text into structured brief       | Telegram message        | Project brief          |
+| Requirements Agent | Finds missing constraints                            | Brief, user context     | Requirements checklist |
+| Template Agent     | Selects the best product template                    | Requirements, memory    | Template choice        |
+| Generator Agent    | Generates the project from template and requirements | Template, brief, memory | Project files          |
+| Repository Agent   | Creates ZIP or GitHub Repo                           | Project files           | Download/repo link     |
+
 
 The ten-agent model is a target architecture, not v1.0 scope. Architect, UX, DB, Backend, Frontend, QA, Security and Deployment agents can be introduced after the MVP proves the core loop.
 
@@ -393,27 +403,29 @@ Supabase is the default database layer for Vuls. It provides Postgres, Auth, Sto
 
 Initial tables:
 
-| Table | Purpose |
-| --- | --- |
-| `profiles` | Application user profile mapped to Telegram identity |
-| `telegram_accounts` | Telegram user/chat metadata and consent state |
-| `projects` | User-created product projects |
-| `project_members` | Access control for projects |
-| `project_stages` | Workflow stage status and approvals |
-| `project_memory` | Durable project facts, decisions, constraints and summaries |
-| `conversation_memory` | Telegram conversation summaries and continuation context |
-| `knowledge_memory` | Reusable lessons, snippets, template notes and product patterns |
-| `templates` | Available product templates and metadata |
-| `template_versions` | Versioned template definitions and file blueprints |
-| `agent_runs` | Agent calls, prompts metadata, status, cost |
-| `tasks` | Fine-grained work items within a stage |
-| `artifacts` | Generated files, docs, logs, screenshots |
-| `repositories` | GitHub repo mapping |
-| `deployments` | Preview/production deployment records |
-| `sandbox_runs` | Code execution attempts and results |
-| `test_runs` | Playwright/unit/lint/format results |
-| `i18n_messages` | Product UI copy keys and translations |
-| `audit_events` | Security and lifecycle audit log |
+
+| Table                 | Purpose                                                         |
+| --------------------- | --------------------------------------------------------------- |
+| `profiles`            | Application user profile mapped to Telegram identity            |
+| `telegram_accounts`   | Telegram user/chat metadata and consent state                   |
+| `projects`            | User-created product projects                                   |
+| `project_members`     | Access control for projects                                     |
+| `project_stages`      | Workflow stage status and approvals                             |
+| `project_memory`      | Durable project facts, decisions, constraints and summaries     |
+| `conversation_memory` | Telegram conversation summaries and continuation context        |
+| `knowledge_memory`    | Reusable lessons, snippets, template notes and product patterns |
+| `templates`           | Available product templates and metadata                        |
+| `template_versions`   | Versioned template definitions and file blueprints              |
+| `agent_runs`          | Agent calls, prompts metadata, status, cost                     |
+| `tasks`               | Fine-grained work items within a stage                          |
+| `artifacts`           | Generated files, docs, logs, screenshots                        |
+| `repositories`        | GitHub repo mapping                                             |
+| `deployments`         | Preview/production deployment records                           |
+| `sandbox_runs`        | Code execution attempts and results                             |
+| `test_runs`           | Playwright/unit/lint/format results                             |
+| `i18n_messages`       | Product UI copy keys and translations                           |
+| `audit_events`        | Security and lifecycle audit log                                |
+
 
 ### 9.2 RLS and Access Control
 
@@ -446,12 +458,14 @@ Memory Layer is critical because Telegram workflows are asynchronous. A user may
 
 ### 10.1 Memory Types
 
-| Memory Type | Purpose | Storage |
-| --- | --- | --- |
-| User Memory | User preferences, language, preferred stack, business context | Supabase Postgres |
-| Project Memory | Product goal, selected template, architecture decisions, generated files summary | Supabase Postgres |
-| Conversation Memory | Telegram conversation summaries, clarification answers, approvals | Supabase Postgres |
-| Knowledge Memory | Reusable patterns, template learnings, common fixes, product heuristics | Supabase Postgres, later vector search |
+
+| Memory Type         | Purpose                                                                          | Storage                                |
+| ------------------- | -------------------------------------------------------------------------------- | -------------------------------------- |
+| User Memory         | User preferences, language, preferred stack, business context                    | Supabase Postgres                      |
+| Project Memory      | Product goal, selected template, architecture decisions, generated files summary | Supabase Postgres                      |
+| Conversation Memory | Telegram conversation summaries, clarification answers, approvals                | Supabase Postgres                      |
+| Knowledge Memory    | Reusable patterns, template learnings, common fixes, product heuristics          | Supabase Postgres, later vector search |
+
 
 ### 10.2 Memory Rules
 
@@ -479,13 +493,15 @@ Template System is the main way Vuls becomes faster and cheaper than pure free-f
 
 ### 11.1 v1.0 Template Catalog
 
-| Template | Use Case | Typical Output |
-| --- | --- | --- |
-| CRM Template | Small business CRM, leads, customers, tasks | React/Next UI, data models, CRUD screens |
-| SaaS Template | Subscription SaaS, landing + app shell | Auth-ready app shell, pricing sections, dashboard |
-| Marketplace Template | Buyer/seller catalog workflows | Listings, profiles, inquiry/order flow |
-| AI Agent Template | Chatbot or workflow agent product | Chat UI, prompt config, tool abstraction |
-| Dashboard Template | Analytics/admin/internal tools | Charts, tables, filters, KPI cards |
+
+| Template             | Use Case                                    | Typical Output                                    |
+| -------------------- | ------------------------------------------- | ------------------------------------------------- |
+| CRM Template         | Small business CRM, leads, customers, tasks | React/Next UI, data models, CRUD screens          |
+| SaaS Template        | Subscription SaaS, landing + app shell      | Auth-ready app shell, pricing sections, dashboard |
+| Marketplace Template | Buyer/seller catalog workflows              | Listings, profiles, inquiry/order flow            |
+| AI Agent Template    | Chatbot or workflow agent product           | Chat UI, prompt config, tool abstraction          |
+| Dashboard Template   | Analytics/admin/internal tools              | Charts, tables, filters, KPI cards                |
+
 
 ### 11.2 Template Structure
 
@@ -543,6 +559,8 @@ flowchart TD
   OpenAI --> Agents["Agents SDK (optional)"]
 ```
 
+
+
 Recommended default:
 
 - OpenAI for high-quality planning, code generation and tool-using workflows.
@@ -568,11 +586,13 @@ Hermes Agent is an optional planning and stage-control collaborator, not a found
 
 MVP can support one mode first:
 
-| Mode | Description | Fit |
-| --- | --- | --- |
-| CLI Adapter | Orchestrator invokes Hermes as a subprocess in a controlled workspace | Local/MVP |
-| HTTP Adapter | Hermes runs as a service behind an internal API | Production |
-| Native Gateway | Hermes handles Telegram directly | Useful for experiments, less control for Vuls |
+
+| Mode           | Description                                                           | Fit                                           |
+| -------------- | --------------------------------------------------------------------- | --------------------------------------------- |
+| CLI Adapter    | Orchestrator invokes Hermes as a subprocess in a controlled workspace | Local/MVP                                     |
+| HTTP Adapter   | Hermes runs as a service behind an internal API                       | Production                                    |
+| Native Gateway | Hermes handles Telegram directly                                      | Useful for experiments, less control for Vuls |
+
 
 Recommended: no Hermes dependency in v1.0. Add CLI Adapter after the core Telegram/Supabase/OpenAI/GitHub loop works; add HTTP Adapter later for production.
 
@@ -691,11 +711,13 @@ Sandboxing is mandatory before Vuls executes user-requested and model-generated 
 
 ### 17.2 Sandbox Options
 
-| Option | Use Case | Trade-off |
-| --- | --- | --- |
+
+| Option                        | Use Case                        | Trade-off                       |
+| ----------------------------- | ------------------------------- | ------------------------------- |
 | Docker with hardened settings | MVP and controlled environments | Requires careful host hardening |
-| Firecracker microVMs | Strong isolation | More complex operations |
-| Managed sandbox provider | Faster production readiness | Vendor cost and dependency |
+| Firecracker microVMs          | Strong isolation                | More complex operations         |
+| Managed sandbox provider      | Faster production readiness     | Vendor cost and dependency      |
+
 
 Recommended: hardened Docker for local MVP, design interface so Firecracker/managed sandbox can replace it.
 
@@ -872,15 +894,17 @@ Deployment must happen only after tests pass. MVP v1.0 should return ZIP/GitHub 
 
 ### 25.1 Scale by Workload Type
 
-| Workload | Scaling Method |
-| --- | --- |
-| Telegram webhook | stateless replicas with idempotent queue writes |
-| Orchestrator | few replicas, DB-backed locks |
-| Agent work | queue workers by stage type |
-| Sandbox execution | isolated runner pool with strict limits |
-| Playwright | browser runner pool, capped concurrency |
-| LLM calls | provider rate limits, budget queues |
-| GitHub/deploy | serialized per project |
+
+| Workload          | Scaling Method                                  |
+| ----------------- | ----------------------------------------------- |
+| Telegram webhook  | stateless replicas with idempotent queue writes |
+| Orchestrator      | few replicas, DB-backed locks                   |
+| Agent work        | queue workers by stage type                     |
+| Sandbox execution | isolated runner pool with strict limits         |
+| Playwright        | browser runner pool, capped concurrency         |
+| LLM calls         | provider rate limits, budget queues             |
+| GitHub/deploy     | serialized per project                          |
+
 
 ### 25.2 Concurrency Rules
 
@@ -1078,13 +1102,14 @@ The architecture document is complete when:
 
 ## 30. Reference Links
 
-- Telegram Bot API: https://core.telegram.org/bots/api
-- Supabase Row Level Security: https://supabase.com/docs/guides/database/postgres/row-level-security
-- Supabase API security guidance: https://supabase.com/docs/guides/api/securing-your-api
-- OpenAI platform docs: https://platform.openai.com/docs
-- OpenAI Agents SDK guide: https://openai.github.io/openai-agents-python/
-- GitHub REST repositories docs: https://docs.github.com/en/rest/repos/repos
-- Docker Compose docs: https://docs.docker.com/compose/
-- Playwright docs: https://playwright.dev/docs/intro
-- ESLint configuration docs: https://eslint.org/docs/latest/use/configure/
-- Prettier configuration docs: https://prettier.io/docs/configuration
+- Telegram Bot API: [https://core.telegram.org/bots/api](https://core.telegram.org/bots/api)
+- Supabase Row Level Security: [https://supabase.com/docs/guides/database/postgres/row-level-security](https://supabase.com/docs/guides/database/postgres/row-level-security)
+- Supabase API security guidance: [https://supabase.com/docs/guides/api/securing-your-api](https://supabase.com/docs/guides/api/securing-your-api)
+- OpenAI platform docs: [https://platform.openai.com/docs](https://platform.openai.com/docs)
+- OpenAI Agents SDK guide: [https://openai.github.io/openai-agents-python/](https://openai.github.io/openai-agents-python/)
+- GitHub REST repositories docs: [https://docs.github.com/en/rest/repos/repos](https://docs.github.com/en/rest/repos/repos)
+- Docker Compose docs: [https://docs.docker.com/compose/](https://docs.docker.com/compose/)
+- Playwright docs: [https://playwright.dev/docs/intro](https://playwright.dev/docs/intro)
+- ESLint configuration docs: [https://eslint.org/docs/latest/use/configure/](https://eslint.org/docs/latest/use/configure/)
+- Prettier configuration docs: [https://prettier.io/docs/configuration](https://prettier.io/docs/configuration)
+

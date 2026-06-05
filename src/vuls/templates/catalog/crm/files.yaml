@@ -1,11 +1,24 @@
 {
   "files": [
     {"path": "README.md", "purpose": "Project overview, setup and testing instructions"},
-    {"path": "src/app/dashboard/page.tsx", "purpose": "CRM dashboard with KPIs and recent activity"},
-    {"path": "src/app/customers/page.tsx", "purpose": "Customer list and customer management entry point"},
-    {"path": "src/app/deals/page.tsx", "purpose": "Sales pipeline and deal tracking"},
-    {"path": "src/app/orders/page.tsx", "purpose": "Order history and order status view"},
-    {"path": "src/app/tasks/page.tsx", "purpose": "Follow-up tasks for owner and staff"},
-    {"path": "src/i18n/en.json", "purpose": "Default English localization keys"}
+    {"path": "package.json", "purpose": "Next.js App Router package manifest with TypeScript and Tailwind dependencies"},
+    {"path": "tsconfig.json", "purpose": "TypeScript project configuration for Next.js"},
+    {"path": "next.config.ts", "purpose": "Next.js application configuration"},
+    {"path": "tailwind.config.ts", "purpose": "Tailwind content configuration for src/app and src components"},
+    {"path": "postcss.config.js", "purpose": "PostCSS configuration for Tailwind CSS"},
+    {"path": "schema.sql", "purpose": "Supabase schema for customers, orders and tasks tables"},
+    {"path": "env.example", "purpose": "Supabase environment variable example file"},
+    {"path": "src/app/layout.tsx", "purpose": "Root App Router layout with navigation for Dashboard, Customers, Orders and Tasks"},
+    {"path": "src/app/globals.css", "purpose": "Tailwind base styles and responsive SaaS CRM theme"},
+    {"path": "src/app/page.tsx", "purpose": "Root route that redirects or links to the dashboard"},
+    {"path": "src/lib/database.types.ts", "purpose": "Typed Supabase table definitions for CRM records"},
+    {"path": "src/lib/supabase.ts", "purpose": "Lazy Supabase client factory for runtime database access"},
+    {"path": "src/app/dashboard/page.tsx", "purpose": "Dashboard with metric cards for customer count, order count and active tasks"},
+    {"path": "src/app/customers/actions.ts", "purpose": "Supabase-backed customer CRUD server actions"},
+    {"path": "src/app/customers/page.tsx", "purpose": "Customer list with Supabase CRUD forms"},
+    {"path": "src/app/orders/actions.ts", "purpose": "Supabase-backed order CRUD server actions"},
+    {"path": "src/app/orders/page.tsx", "purpose": "Order list with service details, CRUD controls and visible order status"},
+    {"path": "src/app/tasks/actions.ts", "purpose": "Supabase-backed task loading for the task board"},
+    {"path": "src/app/tasks/page.tsx", "purpose": "Task board for staff follow-ups and operational work"}
   ]
 }

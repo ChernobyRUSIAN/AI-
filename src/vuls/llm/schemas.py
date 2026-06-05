@@ -43,7 +43,7 @@ class SafetyCheckResult(BaseModel):
 
 
 class ProjectBrief(BaseModel):
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, extra="forbid")
 
     title: str = Field(min_length=1)
     goal: str = Field(min_length=1)
@@ -53,7 +53,7 @@ class ProjectBrief(BaseModel):
 
 
 class ClarificationQuestion(BaseModel):
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, extra="forbid")
 
     question: str = Field(min_length=1)
     options: list[str] = Field(default_factory=list)
@@ -61,7 +61,7 @@ class ClarificationQuestion(BaseModel):
 
 
 class TemplateSelection(BaseModel):
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, extra="forbid")
 
     selected_template_key: str | None
     confidence: float = Field(ge=0.0, le=1.0)
@@ -70,7 +70,7 @@ class TemplateSelection(BaseModel):
 
 
 class GeneratedProjectFile(BaseModel):
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, extra="forbid")
 
     path: str = Field(min_length=1)
     content: str
@@ -86,7 +86,7 @@ class GeneratedProjectFile(BaseModel):
 
 
 class GeneratedEnvironmentVariable(BaseModel):
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, extra="forbid")
 
     name: str = Field(min_length=1)
     description: str = Field(min_length=1)
@@ -94,7 +94,7 @@ class GeneratedEnvironmentVariable(BaseModel):
 
 
 class GeneratedProjectManifest(BaseModel):
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, extra="forbid")
 
     project_name: str = Field(min_length=1)
     readme_summary: str = Field(min_length=1)

@@ -9,6 +9,7 @@
   "bot.intake.clarifying_questions": "أسئلة توضيحية:",
   "bot.intake.question_line": "{index}. {question}",
   "bot.generation.completed": "اكتمل المشروع {project_id}.",
+  "bot.generation.failed": "تعذر إكمال المشروع {project_id} بأمان. حاول مرة أخرى أو حسّن الطلب.",
   "bot.generation.template": "القالب: {template}",
   "bot.generation.github_url": "مستودع GitHub: {url}",
   "bot.generation.zip_artifact": "ملف ZIP: {artifact_id}",

@@ -2,6 +2,12 @@ from typing import Literal, Protocol
 
 from pydantic import BaseModel, Field
 
+from vuls.product_intelligence import (
+    ProductBriefDocument,
+    ProductMemoryDocument,
+    ProjectRoadmap,
+)
+
 
 class CreateProjectRequest(BaseModel):
     telegram_user_id: int
@@ -38,6 +44,21 @@ class ProjectDetailResult(BaseModel):
     updated_at: str
 
 
+class ProductBriefResult(BaseModel):
+    project_id: str
+    brief: ProductBriefDocument
+
+
+class ProjectRoadmapResult(BaseModel):
+    project_id: str
+    roadmap: ProjectRoadmap
+
+
+class ProductMemoryResult(BaseModel):
+    project_id: str
+    memory: ProductMemoryDocument
+
+
 class ProjectService(Protocol):
     def create_project(self, request: CreateProjectRequest) -> ProjectCreateResult: ...
 
@@ -46,3 +67,9 @@ class ProjectService(Protocol):
     ) -> ProjectGenerationResult: ...
 
     def get_project(self, project_id: str) -> ProjectDetailResult: ...
+
+    def get_product_brief(self, project_id: str) -> ProductBriefResult: ...
+
+    def get_project_roadmap(self, project_id: str) -> ProjectRoadmapResult: ...
+
+    def get_project_memory(self, project_id: str) -> ProductMemoryResult: ...

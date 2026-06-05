@@ -9,6 +9,7 @@
   "bot.intake.clarifying_questions": "확인 질문:",
   "bot.intake.question_line": "{index}. {question}",
   "bot.generation.completed": "프로젝트 {project_id}가 완료되었습니다.",
+  "bot.generation.failed": "프로젝트 {project_id}를 안전하게 완료하지 못했습니다. 다시 시도하거나 요청을 조정해 주세요.",
   "bot.generation.template": "템플릿: {template}",
   "bot.generation.github_url": "GitHub 저장소: {url}",
   "bot.generation.zip_artifact": "ZIP 아티팩트: {artifact_id}",

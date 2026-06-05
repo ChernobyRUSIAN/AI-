@@ -3,7 +3,7 @@ from pathlib import Path
 
 from vuls.bot.dispatcher import TelegramDispatcher, create_dispatcher
 from vuls.bot.sender import TelegramSender
-from vuls.core.config import Settings, load_settings
+from vuls.core.config import Settings, load_settings, openai_model_sequence
 from vuls.db.client import SupabaseClient, build_supabase_client
 from vuls.db.repositories.artifacts import ArtifactRepository
 from vuls.db.repositories.audit import AuditRepository
@@ -18,6 +18,7 @@ from vuls.github.service import GitHubApiClientProtocol, GitHubExportService
 from vuls.llm.gateway import LLMClient, LLMGateway
 from vuls.llm.openai_client import OpenAIResponsesClient
 from vuls.memory.service import MemoryService
+from vuls.runtime.project_service import RuntimeProjectService
 from vuls.runtime.telegram_service import RuntimeTelegramFlowService
 from vuls.templates.registry import TemplateRegistry
 
@@ -40,6 +41,7 @@ class RuntimeContainer:
     github_client: GitHubApiClientProtocol
     github_export_service: GitHubExportService
     generation_orchestrator: ProjectGenerationOrchestrator
+    project_service: RuntimeProjectService
     telegram_flow_service: RuntimeTelegramFlowService
     telegram_dispatcher: TelegramDispatcher
     telegram_sender: TelegramSender
@@ -69,11 +71,14 @@ def build_runtime_container(
     template_registry = TemplateRegistry()
     runtime_llm_client = llm_client or OpenAIResponsesClient(
         api_key=runtime_settings.openai_api_key,
+        base_url=runtime_settings.openai_base_url,
         timeout_seconds=runtime_settings.openai_timeout_seconds,
     )
+    configured_models = openai_model_sequence(runtime_settings)
     llm_gateway = LLMGateway(
         client=runtime_llm_client,
-        model=runtime_settings.openai_model,
+        model=configured_models[0],
+        fallback_models=configured_models[1:],
     )
 
     runtime_github_client = github_client or GitHubHttpClient(
@@ -93,6 +98,17 @@ def build_runtime_container(
         project_workdir=runtime_settings.project_workdir,
         artifact_dir=artifact_dir,
         zip_max_bytes=runtime_settings.zip_max_bytes,
+    )
+    project_service = RuntimeProjectService(
+        settings=runtime_settings,
+        user_repository=user_repository,
+        project_repository=project_repository,
+        memory_service=memory_service,
+        llm_gateway=llm_gateway,
+        template_registry=template_registry,
+        generation_orchestrator=generation_orchestrator,
+        github_export_service=github_export_service,
+        github_repository=github_repository,
     )
     telegram_flow_service = RuntimeTelegramFlowService(
         settings=runtime_settings,
@@ -124,6 +140,7 @@ def build_runtime_container(
         github_client=runtime_github_client,
         github_export_service=github_export_service,
         generation_orchestrator=generation_orchestrator,
+        project_service=project_service,
         telegram_flow_service=telegram_flow_service,
         telegram_dispatcher=telegram_dispatcher,
         telegram_sender=telegram_sender,
