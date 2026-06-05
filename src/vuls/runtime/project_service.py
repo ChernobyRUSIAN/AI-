@@ -15,6 +15,14 @@ from vuls.api.routes.projects import (
 from vuls.core.config import Settings
 from vuls.db.client import JsonObject
 from vuls.db.models import ProjectStatus
+from vuls.design_intelligence import (
+    DesignContract,
+    DesignInput,
+    DesignPlatform,
+    build_design_contract,
+    design_contract_prompt_items,
+    load_design_contract,
+)
 from vuls.generation.orchestrator import ProjectGenerationResult as OrchestratedGenerationResult
 from vuls.github.schemas import GitHubExportRequest, GitHubExportResult
 from vuls.llm.gateway import (
@@ -332,11 +340,20 @@ def _project_brief_payload(
         brief=brief,
         selected_template_key=selection.selected_key,
     )
+    design_contract = build_design_contract(
+        DesignInput(
+            product_brief=intelligence.product_brief,
+            domain=intelligence.product_memory.domain,
+            user_prompt=raw_idea,
+            platform="telegram_mini_app",
+        )
+    )
     return {
         "raw_idea": raw_idea,
         "normalized_brief": brief.model_dump(mode="json"),
         "selected_template_key": selection.selected_key,
         "template_confidence": selection.confidence,
+        "design_contract": design_contract.model_dump(mode="json"),
         **intelligence.to_project_brief_payload(),
     }
 
@@ -351,7 +368,22 @@ def _with_product_memory(
     project_items.extend(
         product_intelligence_prompt_items(_product_intelligence_from_project(project))
     )
+    project_items.extend(
+        design_contract_prompt_items(_design_contract_from_project(project))
+    )
     return augmented
+
+
+def _design_contract_from_project(project: Mapping[str, Any]) -> DesignContract:
+    payload = _brief_mapping(project)
+    intelligence = _product_intelligence_from_project(project)
+    return load_design_contract(
+        payload=payload,
+        product_brief=intelligence.product_brief,
+        domain=intelligence.product_memory.domain,
+        user_prompt=str(payload.get("raw_idea", project.get("title", "Build a product"))),
+        platform=_design_platform_from_payload(payload),
+    )
 
 
 def _product_intelligence_from_project(project: Mapping[str, Any]) -> ProductIntelligence:
@@ -362,6 +394,13 @@ def _product_intelligence_from_project(project: Mapping[str, Any]) -> ProductInt
         brief=_brief_from_project(project),
         selected_template_key=_template_key(project),
     )
+
+
+def _design_platform_from_payload(payload: Mapping[str, Any]) -> DesignPlatform:
+    platform = payload.get("platform")
+    if platform in ("telegram_mini_app", "web", "mobile"):
+        return cast(DesignPlatform, platform)
+    return "telegram_mini_app"
 
 
 def _generation_error_from_llm_exception(
