@@ -306,6 +306,8 @@ def test_runtime_project_service_creates_project_from_internal_contract() -> Non
     assert stored_brief["feature_prioritization"]["must_have"]
     assert stored_brief["roadmap"]["phases"][0]["name"] == "Phase 1 - MVP"
     assert stored_brief["product_memory"]["source_idea"] == "Create a CRM for a car wash"
+    assert stored_brief["design_contract"]["visual_archetype"]["key"]
+    assert stored_brief["design_contract"]["open_design_brief"]["prompt"]
 
 
 def test_runtime_project_service_create_project_survives_transient_memory_write_failure(
@@ -404,6 +406,14 @@ def test_runtime_project_service_generates_github_export_from_internal_contract(
     )
     assert any(
         "Feature priorities:" in item
+        for item in memory_context["project"]
+    )
+    assert any(
+        "Design Intelligence:" in item
+        for item in memory_context["project"]
+    )
+    assert any(
+        "Open Design prompt:" in item
         for item in memory_context["project"]
     )
     assert fakes.github_export_service.requests[0].owner == "vuls"

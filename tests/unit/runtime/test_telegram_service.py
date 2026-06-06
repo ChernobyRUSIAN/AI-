@@ -251,6 +251,14 @@ def test_runtime_flow_starts_project_from_telegram_request() -> None:
     assert fakes.project_repository.created[0]["title"] == "Car Wash CRM"
     assert fakes.project_repository.created[0]["slug"] == "car-wash-crm"
     assert fakes.project_repository.created[0]["brief"]["selected_template_key"] == "crm"
+    assert (
+        fakes.project_repository.created[0]["brief"]["design_contract"]["visual_archetype"]["key"]
+    )
+    assert (
+        fakes.project_repository.created[0]["brief"]["design_contract"]["open_design_brief"][
+            "prompt"
+        ]
+    )
     assert fakes.memory_service.project_goals == [
         ("profile-1", "project-1", "Create a CRM for a car wash")
     ]
@@ -284,6 +292,12 @@ def test_runtime_flow_generates_zip_through_generation_service() -> None:
         language_code="en",
     )
     assert fakes.memory_service.context_calls == [("profile-1", "project-1")]
+    memory_context = fakes.generation_orchestrator.calls[0]["memory_context"]
+    assert isinstance(memory_context, dict)
+    assert any(
+        "Design Intelligence:" in item
+        for item in memory_context["project"]
+    )
     assert fakes.project_repository.status_updates == [
         ("project-1", ProjectStatus.GENERATING),
         ("project-1", ProjectStatus.COMPLETED),
