@@ -43,6 +43,13 @@ from vuls.product_intelligence import (
     load_product_intelligence,
     product_intelligence_prompt_items,
 )
+from vuls.reference_analysis import (
+    ReferenceAnalysis,
+    ReferenceInput,
+    analyze_references,
+    load_reference_analysis,
+    reference_analysis_prompt_items,
+)
 from vuls.templates.schemas import TemplateSelection
 
 
@@ -340,11 +347,19 @@ def _project_brief_payload(
         brief=brief,
         selected_template_key=selection.selected_key,
     )
+    reference_analysis = analyze_references(
+        ReferenceInput(
+            domain=intelligence.product_memory.domain,
+            user_intent=raw_idea,
+            platform="telegram_mini_app",
+        )
+    )
     design_contract = build_design_contract(
         DesignInput(
             product_brief=intelligence.product_brief,
             domain=intelligence.product_memory.domain,
             user_prompt=raw_idea,
+            reference_analysis=reference_analysis,
             platform="telegram_mini_app",
         )
     )
@@ -353,6 +368,7 @@ def _project_brief_payload(
         "normalized_brief": brief.model_dump(mode="json"),
         "selected_template_key": selection.selected_key,
         "template_confidence": selection.confidence,
+        "reference_analysis": reference_analysis.model_dump(mode="json"),
         "design_contract": design_contract.model_dump(mode="json"),
         **intelligence.to_project_brief_payload(),
     }
@@ -369,6 +385,9 @@ def _with_product_memory(
         product_intelligence_prompt_items(_product_intelligence_from_project(project))
     )
     project_items.extend(
+        reference_analysis_prompt_items(_reference_analysis_from_project(project))
+    )
+    project_items.extend(
         design_contract_prompt_items(_design_contract_from_project(project))
     )
     return augmented
@@ -382,6 +401,18 @@ def _design_contract_from_project(project: Mapping[str, Any]) -> DesignContract:
         product_brief=intelligence.product_brief,
         domain=intelligence.product_memory.domain,
         user_prompt=str(payload.get("raw_idea", project.get("title", "Build a product"))),
+        platform=_design_platform_from_payload(payload),
+        reference_analysis=_reference_analysis_from_project(project),
+    )
+
+
+def _reference_analysis_from_project(project: Mapping[str, Any]) -> ReferenceAnalysis:
+    payload = _brief_mapping(project)
+    intelligence = _product_intelligence_from_project(project)
+    return load_reference_analysis(
+        payload=payload,
+        domain=intelligence.product_memory.domain,
+        user_intent=str(payload.get("raw_idea", project.get("title", "Build a product"))),
         platform=_design_platform_from_payload(payload),
     )
 

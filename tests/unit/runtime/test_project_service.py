@@ -306,6 +306,7 @@ def test_runtime_project_service_creates_project_from_internal_contract() -> Non
     assert stored_brief["feature_prioritization"]["must_have"]
     assert stored_brief["roadmap"]["phases"][0]["name"] == "Phase 1 - MVP"
     assert stored_brief["product_memory"]["source_idea"] == "Create a CRM for a car wash"
+    assert stored_brief["reference_analysis"]["summary"]
     assert stored_brief["design_contract"]["visual_archetype"]["key"]
     assert stored_brief["design_contract"]["open_design_brief"]["prompt"]
 
@@ -409,6 +410,10 @@ def test_runtime_project_service_generates_github_export_from_internal_contract(
         for item in memory_context["project"]
     )
     assert any(
+        "Reference Analysis:" in item
+        for item in memory_context["project"]
+    )
+    assert any(
         "Design Intelligence:" in item
         for item in memory_context["project"]
     )
@@ -416,6 +421,17 @@ def test_runtime_project_service_generates_github_export_from_internal_contract(
         "Open Design prompt:" in item
         for item in memory_context["project"]
     )
+    reference_index = next(
+        index
+        for index, item in enumerate(memory_context["project"])
+        if "Reference Analysis:" in item
+    )
+    design_index = next(
+        index
+        for index, item in enumerate(memory_context["project"])
+        if "Design Intelligence:" in item
+    )
+    assert reference_index < design_index
     assert fakes.github_export_service.requests[0].owner == "vuls"
     assert fakes.project_repository.status_updates == [
         ("project-1", ProjectStatus.GENERATING),

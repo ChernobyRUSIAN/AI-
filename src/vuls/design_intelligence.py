@@ -5,6 +5,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 from vuls.product_intelligence import ProductBriefDocument
+from vuls.reference_analysis import ReferenceAnalysis
 
 DesignPlatform = Literal["telegram_mini_app", "web", "mobile"]
 
@@ -16,6 +17,7 @@ class DesignInput(BaseModel):
     domain: str = Field(min_length=1)
     user_prompt: str = Field(min_length=1)
     references: list[str] = Field(default_factory=list)
+    reference_analysis: ReferenceAnalysis | None = None
     desired_emotion: str | None = None
     platform: DesignPlatform = "web"
 
@@ -71,9 +73,13 @@ class DesignContract(BaseModel):
 
 
 def build_design_contract(design_input: DesignInput) -> DesignContract:
-    profile = _select_profile(design_input)
+    profile = _profile_with_reference_signals(
+        _select_profile(design_input),
+        _reference_signal_types(design_input.reference_analysis),
+    )
     platform_rules = _platform_rules(design_input.platform)
     references = _clean_references(design_input.references)
+    reference_signals = _reference_signal_types(design_input.reference_analysis)
     product_emotion = _product_emotion(
         default=profile["emotion"],
         desired_emotion=design_input.desired_emotion,
@@ -81,7 +87,10 @@ def build_design_contract(design_input: DesignInput) -> DesignContract:
     screen_composition = f"{profile['composition']} {platform_rules['composition']}"
     interaction_rules = [*profile["interaction_rules"], *platform_rules["interaction_rules"]]
     ux_rules = [*profile["ux_rules"], *platform_rules["ux_rules"]]
-    negative_constraints = _negative_constraints(references)
+    negative_constraints = _negative_constraints(
+        references=references,
+        reference_analysis=design_input.reference_analysis,
+    )
     prompt = _open_design_prompt(
         design_input=design_input,
         profile=profile,
@@ -90,6 +99,7 @@ def build_design_contract(design_input: DesignInput) -> DesignContract:
         interaction_rules=interaction_rules,
         ux_rules=ux_rules,
         references=references,
+        reference_signals=reference_signals,
         negative_constraints=negative_constraints,
     )
 
@@ -124,7 +134,7 @@ def build_design_contract(design_input: DesignInput) -> DesignContract:
         ux_rules=ux_rules,
         open_design_brief=OpenDesignBrief(
             prompt=prompt,
-            inspiration_signals=references,
+            inspiration_signals=[*references, *reference_signals],
             negative_constraints=negative_constraints,
         ),
     )
@@ -138,11 +148,15 @@ def load_design_contract(
     user_prompt: str,
     platform: DesignPlatform = "web",
     references: list[str] | None = None,
+    reference_analysis: ReferenceAnalysis | None = None,
     desired_emotion: str | None = None,
 ) -> DesignContract:
     existing = payload.get("design_contract")
     if isinstance(existing, Mapping):
         return DesignContract.model_validate(dict(existing))
+
+    if reference_analysis is None and isinstance(payload.get("reference_analysis"), Mapping):
+        reference_analysis = ReferenceAnalysis.model_validate(dict(payload["reference_analysis"]))
 
     return build_design_contract(
         DesignInput(
@@ -150,6 +164,7 @@ def load_design_contract(
             domain=domain,
             user_prompt=user_prompt,
             references=references or [],
+            reference_analysis=reference_analysis,
             desired_emotion=desired_emotion,
             platform=platform,
         )
@@ -350,6 +365,85 @@ def _select_profile(design_input: DesignInput) -> dict[str, Any]:
     )
 
 
+def _profile_with_reference_signals(
+    profile: dict[str, Any],
+    signal_types: list[str],
+) -> dict[str, Any]:
+    signals = set(signal_types)
+    if (
+        "gamified_reward_loop" in signals
+        and "dark_technical_control" not in signals
+        and profile["key"] != "clean_medical_dashboard"
+    ):
+        return _profile(
+            key="gamified_reward_interface",
+            label="Gamified reward interface",
+            rationale="Reference signals point to motivation loops, progress feedback, and reward moments.",
+            emotion="energetic, rewarding, premium, motivating",
+            hero_object="Progress-and-reward hero showing streak state, next milestone, and one clear action.",
+            composition="Mobile-first reward surface with a progress hero, momentum indicators, and focused action cards.",
+            hierarchy="Lead with progress and motivation, then surface the next action and supporting activity.",
+            surface_model="Layered premium cards with energetic reward states; avoid childish or branded game styling.",
+            color_system="Energetic contrast with fresh accents, semantic progress colors, and restrained neutral grounding.",
+            typography="Bold display numerics for progress and clean sans text for task clarity.",
+            spacing_radius="Compact rhythm, medium radii, touch-friendly controls, and stable reward modules.",
+            motion="Subtle reward, streak, and completion motion without noisy game animation.",
+            components=[
+                "progress hero",
+                "streak or momentum indicator",
+                "next-action card",
+                "achievement state",
+                "activity queue",
+            ],
+            interaction_rules=[
+                "Make reward feedback quick and product-specific.",
+                "Keep the primary action reachable with one thumb movement.",
+            ],
+            ux_rules=[
+                "Use motivation loops to clarify what the user should do next.",
+                "Never copy a named gamified app's mascot, layout, or brand system.",
+            ],
+        )
+
+    adjusted = dict(profile)
+    if "premium_depth" in signals:
+        adjusted["surface_model"] = (
+            f"{adjusted['surface_model']} Use premium depth with restrained layering, "
+            "crisp contrast, and careful shadow discipline."
+        )
+        adjusted["motion"] = (
+            f"{adjusted['motion']} Add polished micro-motion for state changes and transitions."
+        )
+    if "strong_hero_object" in signals:
+        adjusted["hero_object"] = (
+            "Strong product-specific hero object that communicates state, context, and next action "
+            "without copying any reference composition."
+        )
+        adjusted["hierarchy"] = (
+            f"{adjusted['hierarchy']} Keep the hero object as the first visual decision point."
+        )
+    if "map_first_spatial_context" in signals:
+        adjusted["composition"] = (
+            f"{adjusted['composition']} Add map-first spatial context where routes, territory, or live position "
+            "drive the workflow."
+        )
+    if "dark_technical_control" in signals and profile["key"] == "premium_operations_ui":
+        adjusted["key"] = "dark_technical_control_center"
+        adjusted["label"] = "Dark technical control center"
+        adjusted["rationale"] = "Reference signals point to telemetry, command confidence, and technical control."
+        adjusted["emotion"] = "focused, high-control, precise, technical"
+        adjusted["surface_model"] = "Dark operational panels, thin borders, and high-contrast telemetry modules."
+        adjusted["color_system"] = "Deep neutral base with cyan/green signal colors and restrained warning states."
+    if "clean_medical_trust" in signals and profile["key"] == "premium_operations_ui":
+        adjusted["key"] = "clean_medical_dashboard"
+        adjusted["label"] = "Clean medical dashboard"
+        adjusted["rationale"] = "Reference signals point to clinical trust, risk clarity, and patient context."
+        adjusted["emotion"] = "calm, precise, trustworthy, clinically focused"
+        adjusted["surface_model"] = "Clean light surfaces, crisp borders, restrained shadows, and clear status chips."
+        adjusted["color_system"] = "Medical neutral base with blue/green trust accents and restrained risk states."
+    return adjusted
+
+
 def _open_design_prompt(
     *,
     design_input: DesignInput,
@@ -359,6 +453,7 @@ def _open_design_prompt(
     interaction_rules: list[str],
     ux_rules: list[str],
     references: list[str],
+    reference_signals: list[str],
     negative_constraints: list[str],
 ) -> str:
     brief = design_input.product_brief
@@ -379,10 +474,15 @@ def _open_design_prompt(
         f"Primary components: {'; '.join(profile['components'])}.",
         f"Interaction rules: {'; '.join(interaction_rules)}.",
         f"UX rules: {'; '.join(ux_rules)}.",
-        "Reference examples are inspiration signals, not templates.",
+        (
+            "Reference examples are inspiration signals, not templates. Do not copy layouts, "
+            "brand assets, mascots, proprietary UI, or recognizable visual identity from any referenced product."
+        ),
     ]
     if references:
         lines.append(f"Inspiration signals: {'; '.join(references)}.")
+    if reference_signals:
+        lines.append(f"Reference analysis signals: {'; '.join(reference_signals)}.")
     lines.extend(
         [
             f"Negative constraints: {'; '.join(negative_constraints)}.",
@@ -393,8 +493,16 @@ def _open_design_prompt(
     return " ".join(lines)
 
 
-def _negative_constraints(references: list[str]) -> list[str]:
+def _negative_constraints(
+    *,
+    references: list[str],
+    reference_analysis: ReferenceAnalysis | None,
+) -> list[str]:
     constraints = [
+        (
+            "Reference examples are inspiration signals, not templates. Do not copy layouts, "
+            "brand assets, mascots, proprietary UI, or recognizable visual identity from any referenced product."
+        ),
         "Do not copy any reference UI.",
         "Do not create a Duolingo template.",
         "Do not create an Apple template.",
@@ -404,7 +512,9 @@ def _negative_constraints(references: list[str]) -> list[str]:
     ]
     if references:
         constraints.append("Use references only as inspiration signals for quality, emotion, and interaction density.")
-    return constraints
+    if reference_analysis is not None:
+        constraints.extend(reference_analysis.negative_constraints)
+    return _dedupe_strings(constraints)
 
 
 def _platform_rules(platform: DesignPlatform) -> dict[str, list[str] | str]:
@@ -468,6 +578,33 @@ def _clean_references(references: list[str]) -> list[str]:
         cleaned.append(value)
         seen.add(key)
     return cleaned
+
+
+def _reference_signal_types(reference_analysis: ReferenceAnalysis | None) -> list[str]:
+    if reference_analysis is None:
+        return []
+    signal_types: list[str] = []
+    for signals in (
+        reference_analysis.mood_signals,
+        reference_analysis.composition_signals,
+        reference_analysis.visual_quality_signals,
+        reference_analysis.interaction_signals,
+        reference_analysis.platform_signals,
+    ):
+        signal_types.extend(signal.signal_type for signal in signals)
+    return _dedupe_strings(signal_types)
+
+
+def _dedupe_strings(values: list[str]) -> list[str]:
+    result: list[str] = []
+    seen: set[str] = set()
+    for value in values:
+        key = value.casefold()
+        if key in seen:
+            continue
+        result.append(value)
+        seen.add(key)
+    return result
 
 
 def _haystack(design_input: DesignInput) -> str:

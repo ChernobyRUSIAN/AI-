@@ -6,6 +6,7 @@ from vuls.design_intelligence import (
 )
 from vuls.llm.schemas import ProjectBrief
 from vuls.product_intelligence import ProductBriefDocument, build_product_intelligence
+from vuls.reference_analysis import ReferenceInput, ReferenceItem, analyze_references
 
 
 def test_fitness_prompt_creates_premium_fitness_design_contract() -> None:
@@ -104,6 +105,44 @@ def test_load_design_contract_builds_contract_for_legacy_payload() -> None:
     assert contract.visual_archetype.key == "dark_technical_control_center"
     assert contract.open_design_brief.prompt
     assert design_contract_prompt_items(contract)
+
+
+def test_reference_analysis_refines_design_contract_without_copying_reference() -> None:
+    reference_analysis = analyze_references(
+        ReferenceInput(
+            domain="education",
+            user_intent="Daily learning habit companion",
+            references=[
+                ReferenceItem(
+                    label="Gamified learning reference",
+                    description="Streaks, daily goals, achievement celebration, reward loop.",
+                    source_kind="product_name",
+                    tags=["streak", "reward"],
+                )
+            ],
+            platform="mobile",
+        )
+    )
+
+    contract = build_design_contract(
+        DesignInput(
+            product_brief=_brief("Learning Habit Coach"),
+            domain="education",
+            user_prompt="Daily learning habit companion",
+            platform="mobile",
+            reference_analysis=reference_analysis,
+        )
+    )
+
+    prompt = contract.open_design_brief.prompt.lower()
+    negative_constraints = " ".join(contract.open_design_brief.negative_constraints).lower()
+
+    assert contract.visual_archetype.key == "gamified_reward_interface"
+    assert "reward" in contract.hero_object_strategy.lower()
+    assert "gamified_reward_loop" in contract.open_design_brief.inspiration_signals
+    assert "reference examples are inspiration signals, not templates" in prompt
+    assert "do not copy layouts" in negative_constraints
+    assert "brand assets" in negative_constraints
 
 
 def _brief(name: str) -> ProductBriefDocument:

@@ -251,6 +251,7 @@ def test_runtime_flow_starts_project_from_telegram_request() -> None:
     assert fakes.project_repository.created[0]["title"] == "Car Wash CRM"
     assert fakes.project_repository.created[0]["slug"] == "car-wash-crm"
     assert fakes.project_repository.created[0]["brief"]["selected_template_key"] == "crm"
+    assert fakes.project_repository.created[0]["brief"]["reference_analysis"]["summary"]
     assert (
         fakes.project_repository.created[0]["brief"]["design_contract"]["visual_archetype"]["key"]
     )
@@ -295,9 +296,24 @@ def test_runtime_flow_generates_zip_through_generation_service() -> None:
     memory_context = fakes.generation_orchestrator.calls[0]["memory_context"]
     assert isinstance(memory_context, dict)
     assert any(
+        "Reference Analysis:" in item
+        for item in memory_context["project"]
+    )
+    assert any(
         "Design Intelligence:" in item
         for item in memory_context["project"]
     )
+    reference_index = next(
+        index
+        for index, item in enumerate(memory_context["project"])
+        if "Reference Analysis:" in item
+    )
+    design_index = next(
+        index
+        for index, item in enumerate(memory_context["project"])
+        if "Design Intelligence:" in item
+    )
+    assert reference_index < design_index
     assert fakes.project_repository.status_updates == [
         ("project-1", ProjectStatus.GENERATING),
         ("project-1", ProjectStatus.COMPLETED),

@@ -84,6 +84,49 @@ def test_open_design_input_prefers_design_contract_prompt_when_available() -> No
     assert "Do not copy any reference UI" in brief
 
 
+def test_open_design_brief_includes_reference_analysis_section_when_available() -> None:
+    payload = product_intelligence_to_open_design_input(
+        {
+            "title": "Drone Control",
+            "domain": "drone operations",
+            "reference_analysis": {
+                "mood_signals": [],
+                "composition_signals": [
+                    {
+                        "signal_type": "dark_technical_control",
+                        "value": "Use a focused technical command surface.",
+                        "confidence": 0.9,
+                        "rationale": "Reference language mentions telemetry and control.",
+                    }
+                ],
+                "visual_quality_signals": [
+                    {
+                        "signal_type": "premium_depth",
+                        "value": "Use depth and layered control surfaces.",
+                        "confidence": 0.7,
+                        "rationale": "Reference language mentions premium layers.",
+                    }
+                ],
+                "interaction_signals": [],
+                "platform_signals": [],
+                "negative_constraints": [
+                    "Reference examples are inspiration signals, not templates.",
+                    "Do not copy layouts, brand assets, or proprietary UI.",
+                ],
+                "summary": "References suggest a premium technical control direction.",
+            },
+        }
+    )
+
+    brief = render_open_design_brief(payload)
+
+    assert "## Reference Analysis" in brief
+    assert "dark_technical_control" in brief
+    assert "premium_depth" in brief
+    assert "Reference examples are inspiration signals, not templates" in brief
+    assert "Do not copy layouts, brand assets, or proprietary UI" in brief
+
+
 def test_render_react_tailwind_artifact_contains_reusable_component() -> None:
     payload = product_intelligence_to_open_design_input({"title": "CRM for Fitness Club"})
 
