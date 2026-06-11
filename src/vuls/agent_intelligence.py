@@ -1,6 +1,12 @@
 from enum import StrEnum
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
+
+from vuls.design_intelligence import DesignContract
+from vuls.product_intelligence import ProductIntelligence
+from vuls.reference_analysis import ReferenceAnalysis
+from vuls.reference_image_intelligence import ReferenceImageAnalysis
 
 
 class AgentRole(StrEnum):
@@ -67,6 +73,36 @@ class AgentWorkflow(BaseModel):
                 f"Handoff to: {handoff}."
             )
         return items
+
+
+class AgentExecutionContext(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    user_prompt: str = Field(min_length=1)
+    product_intelligence: ProductIntelligence
+    reference_analysis: ReferenceAnalysis
+    design_contract: DesignContract
+    reference_image_analysis: ReferenceImageAnalysis | None = None
+
+
+class AgentExecutionResult(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    step_order: int = Field(ge=1)
+    agent_role: AgentRole
+    agent_name: str = Field(min_length=1)
+    status: Literal["completed"] = "completed"
+    summary: str = Field(min_length=1)
+    outputs: dict[str, Any] = Field(default_factory=dict)
+    handoff_to: AgentRole | None = None
+
+    def prompt_items(self) -> list[str]:
+        output_keys = ", ".join(sorted(self.outputs)) if self.outputs else "none"
+        return [
+            f"Agent Execution: {self.agent_name} ({self.agent_role.value}) {self.status}.",
+            f"Summary: {self.summary}",
+            f"Outputs: {output_keys}.",
+        ]
 
 
 class AgentRegistry(BaseModel):
@@ -169,6 +205,28 @@ def plan_agent_workflow(
     )
 
 
+def execute_agent_workflow(
+    workflow: AgentWorkflow,
+    context: AgentExecutionContext,
+    registry: AgentRegistry | None = None,
+) -> list[AgentExecutionResult]:
+    agent_registry = registry or AgentRegistry.default()
+    results: list[AgentExecutionResult] = []
+    for step in workflow.steps:
+        agent_registry.get(step.agent_role)
+        if step.agent_role == AgentRole.VULS_ARCHITECT:
+            results.append(_execute_vuls_architect(step, workflow, context))
+        elif step.agent_role == AgentRole.PRODUCT_MANAGER:
+            results.append(_execute_product_manager(step, context))
+        elif step.agent_role == AgentRole.UX_DESIGNER:
+            results.append(_execute_ux_designer(step, context))
+        elif step.agent_role == AgentRole.UI_DESIGNER:
+            results.append(_execute_ui_designer(step, context))
+        else:
+            raise ValueError(f"Unsupported agent role for execution: {step.agent_role.value}")
+    return results
+
+
 def _agent_role(role: AgentRole | str) -> AgentRole:
     if isinstance(role, AgentRole):
         return role
@@ -176,6 +234,193 @@ def _agent_role(role: AgentRole | str) -> AgentRole:
         return AgentRole(role)
     except ValueError as exc:
         raise ValueError(f"Unknown agent role: {role}") from exc
+
+
+def _execute_vuls_architect(
+    step: WorkflowStep,
+    workflow: AgentWorkflow,
+    context: AgentExecutionContext,
+) -> AgentExecutionResult:
+    return AgentExecutionResult(
+        step_order=step.order,
+        agent_role=step.agent_role,
+        agent_name=step.agent_name,
+        summary=(
+            "Vuls Architect confirmed the deterministic product-building path for "
+            f"{context.product_intelligence.product_brief.product_name}."
+        ),
+        outputs={
+            "workflow": workflow.summary,
+            "pipeline": [
+                "Product Intelligence",
+                "Reference Image Intelligence",
+                "Reference Analysis",
+                "Design Intelligence",
+                "Agent Workflow",
+                "Generation Context",
+            ],
+            "constraints": [
+                "No LLM agent execution in MVP.",
+                "No API, Supabase, GitHub Export, or Open Design changes.",
+            ],
+        },
+        handoff_to=step.handoff_to,
+    )
+
+
+def _execute_product_manager(
+    step: WorkflowStep,
+    context: AgentExecutionContext,
+) -> AgentExecutionResult:
+    intelligence = context.product_intelligence
+    brief = intelligence.product_brief
+    priorities = intelligence.feature_prioritization
+    return AgentExecutionResult(
+        step_order=step.order,
+        agent_role=step.agent_role,
+        agent_name=step.agent_name,
+        summary=(
+            f"Product Manager prepared Product Intelligence for {brief.product_name} "
+            f"in the {intelligence.product_memory.domain} domain."
+        ),
+        outputs={
+            "product_name": brief.product_name,
+            "domain": intelligence.product_memory.domain,
+            "target_users": brief.target_audience,
+            "mvp_scope": brief.mvp_scope,
+            "must_have": priorities.must_have,
+            "success_metrics": brief.success_metrics,
+        },
+        handoff_to=step.handoff_to,
+    )
+
+
+def _execute_ux_designer(
+    step: WorkflowStep,
+    context: AgentExecutionContext,
+) -> AgentExecutionResult:
+    intelligence = context.product_intelligence
+    brief = intelligence.product_brief
+    return AgentExecutionResult(
+        step_order=step.order,
+        agent_role=step.agent_role,
+        agent_name=step.agent_name,
+        summary=(
+            f"UX Designer translated {brief.product_name} into a "
+            f"{context.design_contract.platform} flow."
+        ),
+        outputs={
+            "platform": context.design_contract.platform,
+            "primary_journey": _primary_journey(context),
+            "screen_inventory": _screen_inventory(context),
+            "ux_rules": context.design_contract.ux_rules,
+            "primary_actions": _primary_actions(context),
+        },
+        handoff_to=step.handoff_to,
+    )
+
+
+def _execute_ui_designer(
+    step: WorkflowStep,
+    context: AgentExecutionContext,
+) -> AgentExecutionResult:
+    contract = context.design_contract
+    return AgentExecutionResult(
+        step_order=step.order,
+        agent_role=step.agent_role,
+        agent_name=step.agent_name,
+        summary=(
+            f"UI Designer translated the Design Contract into "
+            f"{contract.visual_archetype.label} direction."
+        ),
+        outputs={
+            "visual_archetype": contract.visual_archetype.key,
+            "product_emotion": contract.product_emotion,
+            "surface_model": contract.surface_model,
+            "primary_components": contract.component_rules.primary_components,
+            "reference_signals": _reference_signal_types(context.reference_analysis),
+            "open_design_prompt": contract.open_design_brief.prompt,
+        },
+        handoff_to=step.handoff_to,
+    )
+
+
+def _primary_journey(context: AgentExecutionContext) -> str:
+    if context.product_intelligence.product_memory.domain == "dentistry":
+        return (
+            "Open clinic dashboard -> review patient records -> schedule appointment -> "
+            "track treatment follow-up."
+        )
+    if context.product_intelligence.product_memory.domain == "fitness":
+        return (
+            "Open member dashboard -> review progress -> assign workout -> "
+            "track retention follow-up."
+        )
+    features = context.product_intelligence.feature_prioritization.must_have
+    first_feature = features[0] if features else "dashboard"
+    second_feature = features[1] if len(features) > 1 else "next action"
+    return (
+        f"Open dashboard -> review {first_feature} -> act on {second_feature} -> "
+        "track completion state."
+    )
+
+
+def _screen_inventory(context: AgentExecutionContext) -> list[str]:
+    domain = context.product_intelligence.product_memory.domain
+    if domain == "dentistry":
+        return [
+            "clinic dashboard",
+            "patient records",
+            "appointment schedule",
+            "treatment plan detail",
+            "follow-up queue",
+        ]
+    if domain == "fitness":
+        return [
+            "member progress dashboard",
+            "workout plan detail",
+            "class schedule",
+            "trainer follow-up queue",
+            "retention risk view",
+        ]
+    return [
+        "dashboard",
+        "record detail",
+        "priority queue",
+        "activity timeline",
+        "settings",
+    ]
+
+
+def _primary_actions(context: AgentExecutionContext) -> list[str]:
+    return [
+        f"Review {feature}"
+        for feature in context.product_intelligence.feature_prioritization.must_have[:3]
+    ]
+
+
+def _reference_signal_types(reference_analysis: ReferenceAnalysis) -> list[str]:
+    signal_types: list[str] = []
+    for signals in (
+        reference_analysis.mood_signals,
+        reference_analysis.composition_signals,
+        reference_analysis.visual_quality_signals,
+        reference_analysis.interaction_signals,
+        reference_analysis.platform_signals,
+    ):
+        signal_types.extend(signal.signal_type for signal in signals)
+    return _dedupe_strings(signal_types)
+
+
+def _dedupe_strings(values: list[str]) -> list[str]:
+    result: list[str] = []
+    seen: set[str] = set()
+    for value in values:
+        if value in seen:
+            continue
+        result.append(value)
+        seen.add(value)
+    return result
 
 
 def _vuls_architect_agent() -> Agent:
