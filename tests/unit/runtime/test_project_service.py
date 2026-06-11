@@ -315,6 +315,17 @@ def test_runtime_project_service_creates_project_from_internal_contract() -> Non
     assert stored_brief["reference_analysis"]["summary"]
     assert stored_brief["design_contract"]["visual_archetype"]["key"]
     assert stored_brief["design_contract"]["open_design_brief"]["prompt"]
+    assert stored_brief["agent_workflow"]["summary"] == (
+        "Vuls Architect -> Product Manager -> UX Designer -> UI Designer"
+    )
+    assert [
+        step["agent_role"] for step in stored_brief["agent_workflow"]["steps"]
+    ] == [
+        "vuls_architect",
+        "product_manager",
+        "ux_designer",
+        "ui_designer",
+    ]
 
 
 def test_runtime_project_service_create_project_survives_transient_memory_write_failure(
@@ -427,6 +438,10 @@ def test_runtime_project_service_generates_github_export_from_internal_contract(
         "Open Design prompt:" in item
         for item in memory_context["project"]
     )
+    assert any(
+        "Agent Workflow:" in item
+        for item in memory_context["project"]
+    )
     reference_index = next(
         index
         for index, item in enumerate(memory_context["project"])
@@ -437,7 +452,13 @@ def test_runtime_project_service_generates_github_export_from_internal_contract(
         for index, item in enumerate(memory_context["project"])
         if "Design Intelligence:" in item
     )
+    agent_workflow_index = next(
+        index
+        for index, item in enumerate(memory_context["project"])
+        if "Agent Workflow:" in item
+    )
     assert reference_index < design_index
+    assert design_index < agent_workflow_index
     assert fakes.github_export_service.requests[0].owner == "vuls"
     assert fakes.project_repository.status_updates == [
         ("project-1", ProjectStatus.GENERATING),
@@ -565,6 +586,44 @@ def test_project_brief_payload_accepts_optional_reference_image_analysis() -> No
     assert (
         payload["design_contract"]["visual_archetype"]["key"]
         == "dark_technical_control_center"
+    )
+    assert payload["agent_workflow"]["summary"] == (
+        "Vuls Architect -> Product Manager -> UX Designer -> UI Designer"
+    )
+
+    memory_context = project_service_module._with_product_memory(
+        project={
+            "id": "project-1",
+            "title": "Drone Control",
+            "selected_template_key": "crm",
+            "brief": payload,
+        },
+        memory_context={},
+    )
+    project_items = memory_context["project"]
+    product_index = next(
+        index for index, item in enumerate(project_items) if "Product brief:" in item
+    )
+    reference_image_index = next(
+        index
+        for index, item in enumerate(project_items)
+        if "Reference Image Intelligence:" in item
+    )
+    reference_index = next(
+        index for index, item in enumerate(project_items) if "Reference Analysis:" in item
+    )
+    design_index = next(
+        index for index, item in enumerate(project_items) if "Design Intelligence:" in item
+    )
+    agent_workflow_index = next(
+        index for index, item in enumerate(project_items) if "Agent Workflow:" in item
+    )
+    assert (
+        product_index
+        < reference_image_index
+        < reference_index
+        < design_index
+        < agent_workflow_index
     )
 
 

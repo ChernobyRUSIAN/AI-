@@ -266,6 +266,9 @@ def test_runtime_flow_starts_project_from_telegram_request() -> None:
             "prompt"
         ]
     )
+    assert fakes.project_repository.created[0]["brief"]["agent_workflow"]["summary"] == (
+        "Vuls Architect -> Product Manager -> UX Designer -> UI Designer"
+    )
     assert fakes.memory_service.project_goals == [
         ("profile-1", "project-1", "Create a CRM for a car wash")
     ]
@@ -309,6 +312,10 @@ def test_runtime_flow_generates_zip_through_generation_service() -> None:
         "Design Intelligence:" in item
         for item in memory_context["project"]
     )
+    assert any(
+        "Agent Workflow:" in item
+        for item in memory_context["project"]
+    )
     reference_index = next(
         index
         for index, item in enumerate(memory_context["project"])
@@ -319,7 +326,13 @@ def test_runtime_flow_generates_zip_through_generation_service() -> None:
         for index, item in enumerate(memory_context["project"])
         if "Design Intelligence:" in item
     )
+    agent_workflow_index = next(
+        index
+        for index, item in enumerate(memory_context["project"])
+        if "Agent Workflow:" in item
+    )
     assert reference_index < design_index
+    assert design_index < agent_workflow_index
     assert fakes.project_repository.status_updates == [
         ("project-1", ProjectStatus.GENERATING),
         ("project-1", ProjectStatus.COMPLETED),
@@ -406,6 +419,44 @@ def test_telegram_brief_payload_accepts_optional_reference_image_analysis() -> N
     assert "premium_depth" in payload["design_contract"]["open_design_brief"][
         "inspiration_signals"
     ]
+    assert payload["agent_workflow"]["summary"] == (
+        "Vuls Architect -> Product Manager -> UX Designer -> UI Designer"
+    )
+
+    memory_context = telegram_service_module._with_product_memory(
+        project={
+            "id": "project-1",
+            "title": "Travel Planner",
+            "selected_template_key": "crm",
+            "brief": payload,
+        },
+        memory_context={},
+    )
+    project_items = memory_context["project"]
+    product_index = next(
+        index for index, item in enumerate(project_items) if "Product brief:" in item
+    )
+    reference_image_index = next(
+        index
+        for index, item in enumerate(project_items)
+        if "Reference Image Intelligence:" in item
+    )
+    reference_index = next(
+        index for index, item in enumerate(project_items) if "Reference Analysis:" in item
+    )
+    design_index = next(
+        index for index, item in enumerate(project_items) if "Design Intelligence:" in item
+    )
+    agent_workflow_index = next(
+        index for index, item in enumerate(project_items) if "Agent Workflow:" in item
+    )
+    assert (
+        product_index
+        < reference_image_index
+        < reference_index
+        < design_index
+        < agent_workflow_index
+    )
 
 
 @dataclass(frozen=True)

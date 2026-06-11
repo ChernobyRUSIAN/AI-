@@ -2,6 +2,7 @@ import re
 from collections.abc import Mapping
 from typing import Any, Literal, Protocol, cast
 
+from vuls.agent_intelligence import AgentTask, AgentWorkflow, plan_agent_workflow
 from vuls.bot.messages import (
     ProjectGenerationReply,
     ProjectIntakeResult,
@@ -355,6 +356,13 @@ def _project_brief_payload(
             platform="telegram_mini_app",
         )
     )
+    agent_workflow = plan_agent_workflow(
+        AgentTask(
+            user_prompt=raw_idea,
+            domain=intelligence.product_memory.domain,
+            platform="telegram_mini_app",
+        )
+    )
     payload = {
         "raw_idea": raw_idea,
         "normalized_brief": brief.model_dump(mode="json"),
@@ -362,6 +370,7 @@ def _project_brief_payload(
         "template_confidence": selection.confidence,
         "reference_analysis": reference_analysis.model_dump(mode="json"),
         "design_contract": design_contract.model_dump(mode="json"),
+        "agent_workflow": agent_workflow.model_dump(mode="json"),
         **intelligence.to_project_brief_payload(),
     }
     if reference_image_analysis is not None:
@@ -388,6 +397,7 @@ def _with_product_memory(
     project_items.extend(
         design_contract_prompt_items(_design_contract_from_project(project))
     )
+    project_items.extend(_agent_workflow_from_project(project).prompt_items())
     return augmented
 
 
@@ -401,6 +411,22 @@ def _design_contract_from_project(project: Mapping[str, Any]) -> DesignContract:
         user_prompt=str(payload.get("raw_idea", project.get("title", "Build a product"))),
         platform=_design_platform_from_payload(payload),
         reference_analysis=_reference_analysis_from_project(project),
+    )
+
+
+def _agent_workflow_from_project(project: Mapping[str, Any]) -> AgentWorkflow:
+    payload = _brief_mapping(project)
+    existing = payload.get("agent_workflow")
+    if isinstance(existing, Mapping):
+        return AgentWorkflow.model_validate(dict(existing))
+
+    intelligence = _product_intelligence_from_project(project)
+    return plan_agent_workflow(
+        AgentTask(
+            user_prompt=str(payload.get("raw_idea", project.get("title", "Build a product"))),
+            domain=intelligence.product_memory.domain,
+            platform=_design_platform_from_payload(payload),
+        )
     )
 
 
