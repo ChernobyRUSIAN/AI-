@@ -7,6 +7,11 @@ from vuls.design_intelligence import (
 from vuls.llm.schemas import ProjectBrief
 from vuls.product_intelligence import ProductBriefDocument, build_product_intelligence
 from vuls.reference_analysis import ReferenceInput, ReferenceItem, analyze_references
+from vuls.reference_image_intelligence import (
+    ReferenceImageInput,
+    ReferenceImageItem,
+    analyze_reference_images,
+)
 
 
 def test_fitness_prompt_creates_premium_fitness_design_contract() -> None:
@@ -143,6 +148,49 @@ def test_reference_analysis_refines_design_contract_without_copying_reference() 
     assert "reference examples are inspiration signals, not templates" in prompt
     assert "do not copy layouts" in negative_constraints
     assert "brand assets" in negative_constraints
+
+
+def test_image_reference_signals_refine_design_contract() -> None:
+    image_analysis = analyze_reference_images(
+        ReferenceImageInput(
+            images=[
+                ReferenceImageItem(
+                    filename="duolingo-reward-mobile.webp",
+                    mime_type="image/webp",
+                    width=390,
+                    height=844,
+                    size_bytes=140_000,
+                    caption="Mobile mascot streak reward screen.",
+                    tags=["reward", "mascot", "streak"],
+                )
+            ]
+        )
+    )
+    reference_analysis = analyze_references(
+        ReferenceInput(
+            domain="education",
+            user_intent="Daily habit companion",
+            platform="mobile",
+            image_analysis=image_analysis,
+        )
+    )
+
+    contract = build_design_contract(
+        DesignInput(
+            product_brief=_brief("Habit Companion"),
+            domain="education",
+            user_prompt="Daily habit companion",
+            platform="mobile",
+            reference_analysis=reference_analysis,
+        )
+    )
+
+    negative_constraints = " ".join(contract.open_design_brief.negative_constraints).lower()
+
+    assert contract.visual_archetype.key == "gamified_reward_interface"
+    assert "gamified_reward_loop" in contract.open_design_brief.inspiration_signals
+    assert "do not copy logos" in negative_constraints
+    assert "mascots" in negative_constraints
 
 
 def _brief(name: str) -> ProductBriefDocument:

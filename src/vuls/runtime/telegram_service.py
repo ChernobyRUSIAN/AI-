@@ -42,6 +42,11 @@ from vuls.reference_analysis import (
     load_reference_analysis,
     reference_analysis_prompt_items,
 )
+from vuls.reference_image_intelligence import (
+    ReferenceImageAnalysis,
+    load_reference_image_analysis,
+    reference_image_analysis_prompt_items,
+)
 from vuls.templates.schemas import TemplateSelection
 
 
@@ -326,6 +331,7 @@ def _project_brief_payload(
     raw_idea: str,
     brief: ProjectBrief,
     selection: TemplateSelection,
+    reference_image_analysis: ReferenceImageAnalysis | None = None,
 ) -> dict[str, Any]:
     intelligence = build_product_intelligence(
         raw_idea=raw_idea,
@@ -336,6 +342,7 @@ def _project_brief_payload(
         ReferenceInput(
             domain=intelligence.product_memory.domain,
             user_intent=raw_idea,
+            image_analysis=reference_image_analysis,
             platform="telegram_mini_app",
         )
     )
@@ -348,7 +355,7 @@ def _project_brief_payload(
             platform="telegram_mini_app",
         )
     )
-    return {
+    payload = {
         "raw_idea": raw_idea,
         "normalized_brief": brief.model_dump(mode="json"),
         "selected_template_key": selection.selected_key,
@@ -357,6 +364,9 @@ def _project_brief_payload(
         "design_contract": design_contract.model_dump(mode="json"),
         **intelligence.to_project_brief_payload(),
     }
+    if reference_image_analysis is not None:
+        payload["reference_image_analysis"] = reference_image_analysis.model_dump(mode="json")
+    return payload
 
 
 def _with_product_memory(
@@ -369,6 +379,9 @@ def _with_product_memory(
     project_items.extend(
         product_intelligence_prompt_items(_product_intelligence_from_project(project))
     )
+    reference_image_analysis = _reference_image_analysis_from_project(project)
+    if reference_image_analysis is not None:
+        project_items.extend(reference_image_analysis_prompt_items(reference_image_analysis))
     project_items.extend(
         reference_analysis_prompt_items(_reference_analysis_from_project(project))
     )
@@ -391,6 +404,12 @@ def _design_contract_from_project(project: Mapping[str, Any]) -> DesignContract:
     )
 
 
+def _reference_image_analysis_from_project(
+    project: Mapping[str, Any],
+) -> ReferenceImageAnalysis | None:
+    return load_reference_image_analysis(payload=_brief_mapping(project))
+
+
 def _reference_analysis_from_project(project: Mapping[str, Any]) -> ReferenceAnalysis:
     payload = _brief_mapping(project)
     intelligence = _product_intelligence_from_project(project)
@@ -398,6 +417,7 @@ def _reference_analysis_from_project(project: Mapping[str, Any]) -> ReferenceAna
         payload=payload,
         domain=intelligence.product_memory.domain,
         user_intent=str(payload.get("raw_idea", project.get("title", "Build a product"))),
+        image_analysis=_reference_image_analysis_from_project(project),
         platform=_design_platform_from_payload(payload),
     )
 

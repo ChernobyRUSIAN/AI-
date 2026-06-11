@@ -127,6 +127,68 @@ def test_open_design_brief_includes_reference_analysis_section_when_available() 
     assert "Do not copy layouts, brand assets, or proprietary UI" in brief
 
 
+def test_open_design_brief_includes_reference_image_intelligence_section_when_available() -> None:
+    payload = product_intelligence_to_open_design_input(
+        {
+            "title": "Reward App",
+            "domain": "fitness",
+            "reference_image_analysis": {
+                "composition_signals": [
+                    {
+                        "signal_type": "strong_focal_object",
+                        "value": "Use a product-specific focal object.",
+                        "confidence": 0.8,
+                        "rationale": "Image metadata points to a hero object.",
+                    }
+                ],
+                "color_signals": [],
+                "density_signals": [],
+                "platform_signals": [
+                    {
+                        "signal_type": "mobile_portrait_reference",
+                        "value": "Use mobile portrait ergonomics.",
+                        "confidence": 0.9,
+                        "rationale": "Image aspect ratio is portrait.",
+                    }
+                ],
+                "quality_signals": [
+                    {
+                        "signal_type": "premium_depth_reference",
+                        "value": "Use premium depth.",
+                        "confidence": 0.7,
+                        "rationale": "Image metadata mentions premium glow.",
+                    }
+                ],
+                "negative_constraints": [
+                    "Image references are visual quality signals, not copy targets.",
+                    (
+                        "Do not copy logos, brand assets, mascots, characters, "
+                        "proprietary layouts, or recognizable identity."
+                    ),
+                ],
+                "summary": "Image metadata suggests mobile premium reward UI.",
+            },
+        }
+    )
+
+    brief = render_open_design_brief(payload)
+
+    assert "## Reference Image Intelligence" in brief
+    assert "strong_focal_object" in brief
+    assert "mobile_portrait_reference" in brief
+    assert "premium_depth_reference" in brief
+    assert "Image references are visual quality signals, not copy targets" in brief
+    assert "Do not copy logos, brand assets, mascots, characters" in brief
+
+
+def test_open_design_brief_omits_reference_image_section_for_legacy_payload() -> None:
+    payload = product_intelligence_to_open_design_input({"title": "Legacy CRM"})
+
+    brief = render_open_design_brief(payload)
+
+    assert "## Reference Image Intelligence" not in brief
+
+
 def test_render_react_tailwind_artifact_contains_reusable_component() -> None:
     payload = product_intelligence_to_open_design_input({"title": "CRM for Fitness Club"})
 

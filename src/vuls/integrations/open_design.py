@@ -34,6 +34,7 @@ class OpenDesignInput:
     metrics: tuple[str, ...]
     routes: tuple[str, ...]
     visual_direction: str
+    reference_image_analysis: JsonObject | None
     reference_analysis: JsonObject | None
 
 
@@ -169,6 +170,7 @@ def product_intelligence_to_open_design_input(data: dict[str, object]) -> OpenDe
             "visual_direction",
             fallback="Operational SaaS UI with calm contrast, dense tables, and clear action states.",
         ),
+        reference_image_analysis=_reference_image_analysis_from_data(data),
         reference_analysis=_reference_analysis_from_data(data),
     )
 
@@ -183,6 +185,7 @@ def render_open_design_brief(payload: OpenDesignInput) -> str:
             f"- Audience: {', '.join(payload.audience)}",
             f"- Visual direction: {payload.visual_direction}",
             "",
+            *_render_reference_image_analysis_section(payload.reference_image_analysis),
             *_render_reference_analysis_section(payload.reference_analysis),
             "## Core Workflows",
             *[f"- {item}" for item in payload.workflows],
@@ -452,6 +455,35 @@ def _reference_analysis_from_data(data: dict[str, object]) -> JsonObject | None:
     if not isinstance(value, Mapping):
         return None
     return cast(JsonObject, dict(value))
+
+
+def _reference_image_analysis_from_data(data: dict[str, object]) -> JsonObject | None:
+    value = data.get("reference_image_analysis")
+    if not isinstance(value, Mapping):
+        return None
+    return cast(JsonObject, dict(value))
+
+
+def _render_reference_image_analysis_section(analysis: JsonObject | None) -> list[str]:
+    if analysis is None:
+        return []
+
+    lines = [
+        "## Reference Image Intelligence",
+        f"- Summary: {_json_string(analysis.get('summary'), fallback='Image reference signals provided.')}",
+    ]
+    lines.extend(_signal_lines("Composition signals", analysis.get("composition_signals")))
+    lines.extend(_signal_lines("Color signals", analysis.get("color_signals")))
+    lines.extend(_signal_lines("Density signals", analysis.get("density_signals")))
+    lines.extend(_signal_lines("Platform signals", analysis.get("platform_signals")))
+    lines.extend(_signal_lines("Quality signals", analysis.get("quality_signals")))
+
+    negative_constraints = _strings_from_value(analysis.get("negative_constraints"))
+    if negative_constraints:
+        lines.append("- Constraints:")
+        lines.extend(f"  - {item}" for item in negative_constraints)
+    lines.append("")
+    return lines
 
 
 def _render_reference_analysis_section(analysis: JsonObject | None) -> list[str]:

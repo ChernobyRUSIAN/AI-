@@ -22,6 +22,12 @@ from vuls.llm.schemas import (
 )
 from vuls.memory.schemas import MemoryContext
 from vuls.memory.service import MemoryService
+from vuls.reference_image_intelligence import (
+    ReferenceImageInput,
+    ReferenceImageItem,
+    analyze_reference_images,
+)
+from vuls.runtime import project_service as project_service_module
 from vuls.runtime.project_service import RuntimeProjectGenerationError, RuntimeProjectService
 from vuls.templates.schemas import TemplateSelection
 
@@ -515,6 +521,51 @@ def test_runtime_project_service_reads_product_brief_roadmap_and_memory() -> Non
     assert roadmap_result.roadmap.phases[0].name == "Phase 1 - MVP"
     assert memory_result.memory.selected_template == "crm"
     assert memory_result.memory.product_brief.product_name == "Car Wash CRM"
+
+
+def test_project_brief_payload_accepts_optional_reference_image_analysis() -> None:
+    image_analysis = analyze_reference_images(
+        ReferenceImageInput(
+            images=[
+                ReferenceImageItem(
+                    filename="dark-drone-control.webp",
+                    mime_type="image/webp",
+                    width=390,
+                    height=844,
+                    size_bytes=180_000,
+                    caption="Dark drone telemetry control dashboard.",
+                    tags=["drone", "control", "terminal"],
+                )
+            ]
+        )
+    )
+
+    payload = project_service_module._project_brief_payload(
+        raw_idea="Drone control app",
+        brief=ProjectBrief(
+            title="Drone Control",
+            goal="Drone control app",
+            target_users=["operator"],
+            must_have_features=["telemetry"],
+            language_code="en",
+        ),
+        selection=FakeTemplateRegistry().select_template("Drone control app"),
+        reference_image_analysis=image_analysis,
+    )
+
+    assert payload["reference_image_analysis"]["summary"]
+    assert any(
+        signal["signal_type"] == "technical_control_reference"
+        for signal in payload["reference_image_analysis"]["quality_signals"]
+    )
+    assert any(
+        signal["signal_type"] == "dark_technical_control"
+        for signal in payload["reference_analysis"]["mood_signals"]
+    )
+    assert (
+        payload["design_contract"]["visual_archetype"]["key"]
+        == "dark_technical_control_center"
+    )
 
 
 @dataclass(frozen=True)

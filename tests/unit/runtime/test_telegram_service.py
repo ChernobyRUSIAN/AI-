@@ -14,6 +14,12 @@ from vuls.llm.schemas import (
     ProjectBrief,
 )
 from vuls.memory.schemas import MemoryContext
+from vuls.reference_image_intelligence import (
+    ReferenceImageInput,
+    ReferenceImageItem,
+    analyze_reference_images,
+)
+from vuls.runtime import telegram_service as telegram_service_module
 from vuls.runtime.telegram_service import RuntimeTelegramFlowService
 from vuls.templates.schemas import TemplateSelection
 
@@ -356,6 +362,50 @@ def test_runtime_flow_lists_recent_projects_and_active_project() -> None:
     assert active.project_id == "project-1"
     assert active.title == "Car Wash CRM"
     assert active.template == "crm"
+
+
+def test_telegram_brief_payload_accepts_optional_reference_image_analysis() -> None:
+    image_analysis = analyze_reference_images(
+        ReferenceImageInput(
+            images=[
+                ReferenceImageItem(
+                    filename="premium-travel-hero.png",
+                    mime_type="image/png",
+                    width=1600,
+                    height=700,
+                    size_bytes=300_000,
+                    caption="Wide premium travel hero with glow and focal object.",
+                    tags=["travel", "premium", "hero"],
+                )
+            ]
+        )
+    )
+
+    payload = telegram_service_module._project_brief_payload(
+        raw_idea="AI travel planner",
+        brief=ProjectBrief(
+            title="Travel Planner",
+            goal="AI travel planner",
+            target_users=["traveler"],
+            must_have_features=["itinerary"],
+            language_code="en",
+        ),
+        selection=FakeTemplateRegistry().select_template("AI travel planner"),
+        reference_image_analysis=image_analysis,
+    )
+
+    assert payload["reference_image_analysis"]["summary"]
+    assert any(
+        signal["signal_type"] == "wide_hero_reference"
+        for signal in payload["reference_image_analysis"]["composition_signals"]
+    )
+    assert any(
+        signal["signal_type"] == "strong_hero_object"
+        for signal in payload["reference_analysis"]["composition_signals"]
+    )
+    assert "premium_depth" in payload["design_contract"]["open_design_brief"][
+        "inspiration_signals"
+    ]
 
 
 @dataclass(frozen=True)

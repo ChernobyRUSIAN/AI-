@@ -4,6 +4,11 @@ from vuls.reference_analysis import (
     analyze_references,
     reference_analysis_prompt_items,
 )
+from vuls.reference_image_intelligence import (
+    ReferenceImageInput,
+    ReferenceImageItem,
+    analyze_reference_images,
+)
 
 
 def test_empty_references_return_safe_default_analysis() -> None:
@@ -174,6 +179,44 @@ def test_bottom_navigation_reference_is_interaction_signal() -> None:
     assert "mobile_first_bottom_navigation" not in [
         signal.signal_type for signal in analysis.platform_signals
     ]
+
+
+def test_image_analysis_signals_are_mapped_into_reference_analysis() -> None:
+    image_analysis = analyze_reference_images(
+        ReferenceImageInput(
+            images=[
+                ReferenceImageItem(
+                    filename="duolingo-like-reward.webp",
+                    mime_type="image/webp",
+                    width=390,
+                    height=844,
+                    size_bytes=160_000,
+                    caption="Mascot streak reward mobile screen.",
+                    tags=["reward", "mascot", "streak"],
+                )
+            ]
+        )
+    )
+
+    analysis = analyze_references(
+        ReferenceInput(
+            domain="fitness",
+            user_intent="Fitness motivation app",
+            platform="mobile",
+            image_analysis=image_analysis,
+        )
+    )
+
+    assert "gamified_reward_loop" in [
+        signal.signal_type for signal in analysis.interaction_signals
+    ]
+    assert "mobile_first_bottom_navigation" in [
+        signal.signal_type for signal in analysis.interaction_signals
+    ]
+    assert "strong_hero_object" in [
+        signal.signal_type for signal in analysis.composition_signals
+    ]
+    assert any("mascots" in item.lower() for item in analysis.negative_constraints)
 
 
 def _signal_types(analysis: object) -> set[str]:

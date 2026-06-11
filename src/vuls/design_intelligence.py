@@ -370,6 +370,36 @@ def _profile_with_reference_signals(
     signal_types: list[str],
 ) -> dict[str, Any]:
     signals = set(signal_types)
+    if "dark_technical_control" in signals and profile["key"] != "clean_medical_dashboard":
+        return _profile(
+            key="dark_technical_control_center",
+            label="Dark technical control center",
+            rationale="Reference signals point to telemetry, command confidence, and technical control.",
+            emotion="focused, high-control, precise, technical",
+            hero_object="Live system object with telemetry, route, device, or operational state wrapped by controls.",
+            composition="Control-center layout with status map, telemetry cards, command rail, and event stream.",
+            hierarchy="Lead with live state and exceptions, then expose controls, diagnostics, and recent events.",
+            surface_model="Dark operational panels, thin borders, and high-contrast telemetry modules.",
+            color_system="Deep neutral base with cyan/green signal colors and restrained warning states.",
+            typography="Compact technical sans with tabular numerics and clear labels.",
+            spacing_radius="Dense spacing, small-to-medium radii, aligned telemetry grids.",
+            motion="Low-latency signal motion for live updates, route progress, and alert state changes.",
+            components=[
+                "live object hero",
+                "telemetry cards",
+                "control rail",
+                "map or path panel",
+                "event log",
+            ],
+            interaction_rules=[
+                "Make critical controls visually distinct from passive telemetry.",
+                "Prefer progressive disclosure for advanced diagnostics.",
+            ],
+            ux_rules=[
+                "Prioritize current state, risk, and next action over CRUD lists.",
+                "Design for rapid operator scanning in low-light contexts.",
+            ],
+        )
     if (
         "gamified_reward_loop" in signals
         and "dark_technical_control" not in signals
@@ -427,13 +457,6 @@ def _profile_with_reference_signals(
             f"{adjusted['composition']} Add map-first spatial context where routes, territory, or live position "
             "drive the workflow."
         )
-    if "dark_technical_control" in signals and profile["key"] == "premium_operations_ui":
-        adjusted["key"] = "dark_technical_control_center"
-        adjusted["label"] = "Dark technical control center"
-        adjusted["rationale"] = "Reference signals point to telemetry, command confidence, and technical control."
-        adjusted["emotion"] = "focused, high-control, precise, technical"
-        adjusted["surface_model"] = "Dark operational panels, thin borders, and high-contrast telemetry modules."
-        adjusted["color_system"] = "Deep neutral base with cyan/green signal colors and restrained warning states."
     if "clean_medical_trust" in signals and profile["key"] == "premium_operations_ui":
         adjusted["key"] = "clean_medical_dashboard"
         adjusted["label"] = "Clean medical dashboard"
