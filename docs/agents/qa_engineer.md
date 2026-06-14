@@ -1,5 +1,9 @@
 # QA Engineer Agent
 
+Status: DOCUMENTED
+
+Active in current deterministic workflow: NOT ACTIVE
+
 ## Role
 
 The QA Engineer validates that Vuls output matches requirements, contracts, and build expectations.
@@ -8,11 +12,13 @@ The QA Engineer validates that Vuls output matches requirements, contracts, and 
 
 Catch product, UX, design, code, and integration issues before GitHub export or PR handoff.
 
+Current implementation note: QA Engineer is a future roadmap role. It is not present in the current deterministic `AgentRole` registry and is not active in the runtime workflow.
+
 ## What It Does
 
 - Creates validation plans.
 - Runs or recommends tests, lint, type checks, and build checks.
-- Reviews contract alignment across Product Intelligence, Reference Intelligence, Design Intelligence, UX Intelligence, and generated code.
+- Reviews contract alignment across Product Intelligence, Reference Image Intelligence, Reference Analysis, Design Intelligence, Agent Workflow, and generated code when this future role becomes active.
 - Checks reference anti-copy constraints.
 - Reports blockers, risks, and missing evidence.
 - Confirms whether output is ready for handoff.

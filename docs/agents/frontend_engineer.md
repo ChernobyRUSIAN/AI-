@@ -1,5 +1,9 @@
 # Frontend Engineer Agent
 
+Status: DOCUMENTED
+
+Active in current deterministic workflow: NOT ACTIVE
+
 ## Role
 
 The Frontend Engineer turns product, UX, and design contracts into buildable user interfaces.
@@ -7,6 +11,8 @@ The Frontend Engineer turns product, UX, and design contracts into buildable use
 ## Goal
 
 Generate maintainable React, Next.js, and Tailwind-compatible frontend output that matches Vuls intelligence layers.
+
+Current implementation note: Frontend Engineer is a future roadmap role. It is not present in the current deterministic `AgentRole` registry and is not active in the runtime workflow.
 
 ## What It Does
 

@@ -2,9 +2,66 @@
 
 ## Purpose
 
-The Vuls Agent System is a lightweight documentation-based memory foundation for future specialized agents.
+The Vuls Agent System documents the current deterministic agent workflow contracts and the future LLM-backed agent roadmap.
 
-The first version is intentionally simple. It defines shared memory, role files, and workflow expectations without adding runtime code.
+Documentation must distinguish current implementation from future architecture. If documentation and code disagree, code is the source of truth.
+
+## Current Implemented Pipeline
+
+The following pipeline is active and deterministic in the current codebase:
+
+1. Product Intelligence — analyzes product idea and extracts requirements
+2. Reference Image Intelligence — processes reference images when provided
+3. Reference Analysis — synthesizes reference information
+4. Design Intelligence — creates design decisions and structure
+5. Agent Workflow — determines execution order
+6. Agent Execution — executes workflow agents
+7. Generation Context — assembles final generation context
+
+This is the actual current implementation.
+
+Implementation note: the current runtime project and Telegram services persist Agent Workflow and assemble Generation Context. `src/vuls/agent_intelligence.py` also contains deterministic Agent Execution helpers. These helpers are not LLM-backed specialized agents.
+
+## Future Roadmap — Not Yet Implemented
+
+The following represents the target architecture and is not yet active:
+
+- Product Manager Agent (LLM-backed)
+- UX Designer Agent (LLM-backed)
+- UI Designer Agent (LLM-backed)
+- Frontend Engineer Agent
+- Backend Engineer Agent
+- QA Engineer Agent
+
+These are documented future components.
+
+They are not currently active in the deterministic workflow.
+
+## Agent Roles: Current vs Future
+
+### Vuls Architect (Current)
+
+Status: ACTIVE
+
+Role:
+
+- Architecture coordination
+- Workflow orchestration
+- Pipeline consistency
+
+Important:
+
+Vuls Architect is NOT a GitHub Export agent.
+
+### Frontend / Backend / QA Agents (Future)
+
+Status:
+
+DOCUMENTED
+
+NOT ACTIVE
+
+These agents become active only after LLM-backed execution is implemented.
 
 ## Agent Formula
 
@@ -32,11 +89,11 @@ Core memory sources:
 - `docs/VULS_MASTER_CONTEXT.md`
 - `docs/agents/*.md`
 - Product Intelligence output
-- Reference Intelligence output
+- Reference Image Intelligence output when present
+- Reference Analysis output
 - Design Intelligence output
-- UX Intelligence output
-- Code generation context
-- QA results
+- Agent Workflow output
+- Generation Context
 
 ### Tools
 
@@ -51,7 +108,7 @@ Examples:
 - Build validation
 - GitHub export
 
-Agents should use tools only when their role and the active workflow require them.
+Agents should use tools only when their role and the active workflow require them. Future agent tools must not be documented as current runtime behavior until they are wired in code.
 
 ### Role
 
@@ -63,7 +120,19 @@ Roles prevent the system from mixing product strategy, UX, UI, engineering, and 
 
 Workflow defines the order of work and handoffs.
 
-Default Vuls workflow:
+Current deterministic workflow:
+
+```text
+Product Intelligence
+-> Reference Image Intelligence
+-> Reference Analysis
+-> Design Intelligence
+-> Agent Workflow
+-> Agent Execution
+-> Generation Context
+```
+
+Future LLM-backed workflow target:
 
 ```text
 Idea
@@ -73,21 +142,10 @@ Idea
 -> Frontend Engineer
 -> Backend Engineer
 -> QA Engineer
--> Vuls Architect review
 -> GitHub Export
 ```
 
-The workflow can skip roles when the task is small, but it should preserve the contract order:
-
-```text
-Product Intelligence
--> Reference Intelligence
--> Design Intelligence
--> UX Intelligence
--> Code Generation
--> QA
--> GitHub Export
-```
+The future workflow is not active in the current deterministic runtime.
 
 ## Handoff Model
 
@@ -96,13 +154,12 @@ Agents should pass structured outputs forward.
 Preferred handoff artifacts:
 
 - Product brief
+- Reference image analysis when present
 - Reference analysis
 - Design contract
-- UX flow spec
-- Component plan
-- API or data contract
-- QA report
-- GitHub export summary
+- Agent workflow
+- Agent execution result when used
+- Generation context
 
 Handoffs should include decisions, constraints, risks, and unresolved questions.
 
@@ -117,11 +174,11 @@ Handoffs should include decisions, constraints, risks, and unresolved questions.
 
 ## MVP Scope
 
-This documentation layer is the first memory system.
+The current implementation includes deterministic intelligence builders, workflow contracts, and generation context assembly.
 
 It does not yet implement:
 
-- Agent routing runtime
+- LLM-backed specialized agent execution
 - Persistent agent state
 - Tool permission enforcement
 - Multi-agent orchestration

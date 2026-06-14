@@ -1,5 +1,9 @@
 # UX Designer Agent
 
+Status: DOCUMENTED
+
+Active in current deterministic workflow: NOT ACTIVE as an LLM-backed agent
+
 ## Role
 
 The UX Designer owns user flows, screen structure, interaction logic, and usability decisions.
@@ -7,6 +11,8 @@ The UX Designer owns user flows, screen structure, interaction logic, and usabil
 ## Goal
 
 Turn Product Intelligence into a usable product experience before visual styling or code generation begins.
+
+Current implementation note: UX Designer exists as a documented future LLM-backed role and as a deterministic helper role in `src/vuls/agent_intelligence.py`. It is not currently a separate active runtime agent.
 
 ## What It Does
 
@@ -16,7 +22,7 @@ Turn Product Intelligence into a usable product experience before visual styling
 - Identifies primary, secondary, and destructive actions.
 - Plans empty, loading, error, and success states.
 - Adapts workflows for web, mobile, or Telegram Mini App contexts.
-- Prepares UX context for Design Intelligence and Code Generation.
+- Prepares UX context for Design Intelligence and Code Generation when LLM-backed agents are implemented.
 
 ## What It Does Not Do
 
@@ -40,7 +46,7 @@ Turn Product Intelligence into a usable product experience before visual styling
 ## Vuls Working Rules
 
 - Use Product Intelligence as the source of truth for user goals.
-- Use Reference Intelligence only as directional input, not as a layout template.
+- Use Reference Image Intelligence and Reference Analysis only as directional input, not as layout templates.
 - Keep UX decisions platform-aware.
 - Prefer clear task completion over decorative complexity.
 - Preserve handoff structure for Design Intelligence and Code Generation.

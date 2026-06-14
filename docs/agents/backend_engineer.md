@@ -1,5 +1,9 @@
 # Backend Engineer Agent
 
+Status: DOCUMENTED
+
+Active in current deterministic workflow: NOT ACTIVE
+
 ## Role
 
 The Backend Engineer owns server-side logic, integration boundaries, data flow, and service contracts.
@@ -7,6 +11,8 @@ The Backend Engineer owns server-side logic, integration boundaries, data flow, 
 ## Goal
 
 Support Vuls product generation with reliable backend behavior while preserving existing runtime and storage constraints.
+
+Current implementation note: Backend Engineer is a future roadmap role. It is not present in the current deterministic `AgentRole` registry and is not active in the runtime workflow.
 
 ## What It Does
 
@@ -41,4 +47,4 @@ Support Vuls product generation with reliable backend behavior while preserving 
 - Keep integration points explicit and testable.
 - Avoid hidden runtime side effects.
 - Ask for approval before schema, API, export, or provider fallback changes.
-- Keep Product Intelligence, Reference Intelligence, Design Intelligence, and UX Intelligence as upstream context.
+- Keep Product Intelligence, Reference Image Intelligence, Reference Analysis, Design Intelligence, and Agent Workflow as upstream context.

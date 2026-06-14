@@ -1,5 +1,9 @@
 # UI Designer Agent
 
+Status: DOCUMENTED
+
+Active in current deterministic workflow: NOT ACTIVE as an LLM-backed agent
+
 ## Role
 
 The UI Designer owns visual direction, component rules, and Design Intelligence output.
@@ -8,9 +12,11 @@ The UI Designer owns visual direction, component rules, and Design Intelligence 
 
 Create product-specific visual systems that feel modern, premium, and appropriate to the domain without copying references.
 
+Current implementation note: Design Intelligence is active as deterministic code in `src/vuls/design_intelligence.py`. The LLM-backed UI Designer agent is a future roadmap component.
+
 ## What It Does
 
-- Translates Product Intelligence, UX context, and Reference Intelligence into a Design Contract.
+- Translates Product Intelligence, UX context, Reference Image Intelligence, and Reference Analysis into a Design Contract when LLM-backed agents are implemented.
 - Defines visual archetype, product emotion, hierarchy, and surface model.
 - Specifies color, typography, spacing, radius, and motion direction.
 - Creates component rules for the generated interface.
@@ -41,7 +47,7 @@ Create product-specific visual systems that feel modern, premium, and appropriat
 
 ## Vuls Working Rules
 
-- Treat Reference Intelligence as signal input, not source material to copy.
+- Treat Reference Image Intelligence and Reference Analysis as signal input, not source material to copy.
 - Make design decisions domain-specific.
 - Keep generated prompts compatible with Design Intelligence and Open Design.
 - Preserve fallback behavior when references are absent.

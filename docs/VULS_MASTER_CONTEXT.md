@@ -4,7 +4,7 @@
 
 Vuls is an AI Product Builder.
 
-Vuls turns an idea into product intelligence, reference intelligence, design direction, generated application code, QA feedback, and GitHub-ready output.
+Vuls turns an idea into product intelligence, reference signals, design direction, a deterministic agent workflow, and generation context for application generation.
 
 Vuls is not a cybersecurity scanner. Agents must not interpret Vuls as a vulnerability scanner, CVE tool, security inventory, or remediation system unless a user explicitly asks for that unrelated domain.
 
@@ -14,18 +14,39 @@ Vuls should generate product-specific applications that feel intentional, usable
 
 The system should understand the product, the domain, the target users, the desired emotion, and the visual direction before generating code.
 
-## Core Pipeline
+## Current Implemented Pipeline
+
+The following pipeline is active and deterministic in the current codebase:
+
+1. Product Intelligence — analyzes product idea and extracts requirements
+2. Reference Image Intelligence — processes reference images when provided
+3. Reference Analysis — synthesizes reference information
+4. Design Intelligence — creates design decisions and structure
+5. Agent Workflow — determines execution order
+6. Agent Execution — executes workflow agents
+7. Generation Context — assembles final generation context
+
+This is the actual current implementation.
 
 ```text
-Idea
--> Product Intelligence
--> Reference Intelligence
+Product Intelligence
+-> Reference Image Intelligence
+-> Reference Analysis
 -> Design Intelligence
--> UX Intelligence
--> Code Generation
--> QA
--> GitHub Export
+-> Agent Workflow
+-> Agent Execution
+-> Generation Context
 ```
+
+## Implementation Wiring Notes
+
+The runtime project and Telegram services create deterministic project context during intake. They store Product Intelligence, Reference Analysis, Design Intelligence, and Agent Workflow in the project brief payload.
+
+Generation Context is assembled from memory plus the stored intelligence artifacts before calling the generation orchestrator.
+
+Reference Image Intelligence is implemented and is included in Generation Context when a `reference_image_analysis` payload exists. The inspected runtime entry points do not currently ingest uploaded image files directly.
+
+Agent Execution helpers are implemented in `src/vuls/agent_intelligence.py`. They are deterministic helpers, not LLM-backed specialized agents.
 
 ## Product Intelligence
 
@@ -44,13 +65,28 @@ It should capture:
 
 Product Intelligence is the first product memory layer. Later layers should reuse it instead of rediscovering the same product facts.
 
-## Reference Intelligence
+## Reference Image Intelligence
 
-Reference Intelligence extracts inspiration signals from optional references.
+Reference Image Intelligence extracts visual signals from optional reference image metadata.
+
+It may identify:
+
+- Composition signals
+- Color signals
+- Density signals
+- Platform signals
+- Quality signals
+- Anti-copy constraints
+
+Reference Image Intelligence must treat images as visual quality signals, not copy targets.
+
+## Reference Analysis
+
+Reference Analysis synthesizes text reference signals, product context, and Reference Image Intelligence when present.
 
 References are inspiration signals, not templates.
 
-Reference Intelligence may identify:
+Reference Analysis may identify:
 
 - Mood signals
 - Composition signals
@@ -59,7 +95,7 @@ Reference Intelligence may identify:
 - Domain fit signals
 - Anti-copy constraints
 
-Reference Intelligence must not copy a brand, mascot, logo, exact layout, exact visual system, or proprietary UI pattern.
+Reference Analysis must not copy a brand, mascot, logo, exact layout, exact visual system, or proprietary UI pattern.
 
 ## Design Intelligence
 
@@ -83,55 +119,50 @@ The Design Contract should describe:
 
 Design Intelligence is the bridge between product reasoning and UI generation.
 
-## UX Intelligence
+## Agent Workflow
 
-UX Intelligence defines product behavior and user flow.
+Agent Workflow determines the deterministic execution order and handoff boundaries for the current product generation context.
 
-It should reason about:
+It currently plans a structured workflow using:
 
-- Information architecture
-- Core user journeys
-- Screen inventory
-- Primary actions
-- Empty, loading, and error states
-- Navigation model
-- Onboarding and retention loops
-- Platform-specific ergonomics
+- Vuls Architect
+- Product Manager
+- UX Designer
+- UI Designer
 
-UX Intelligence should make the product usable before the interface is rendered.
+These roles are deterministic workflow contracts in the current implementation. They are not separate LLM-backed workers.
 
-## Code Generation
+## Agent Execution
 
-Code Generation turns structured product, UX, and design context into application code.
+Agent Execution executes workflow steps through deterministic helpers in `src/vuls/agent_intelligence.py`.
 
-It should favor:
+It returns structured step results such as:
 
-- React and Next.js compatibility
-- Tailwind-compatible styling when requested by the pipeline
-- Reusable components
-- Clear state boundaries
-- Accessible UI
-- Buildable output
+- Agent role
+- Agent name
+- Execution status
+- Summary
+- Outputs
+- Handoff target
 
-Code Generation must follow the contracts produced by earlier intelligence layers.
+This should not be confused with future LLM-backed multi-agent execution.
 
-## QA
+## Generation Context
 
-QA validates that generated output matches the user's request and the structured contracts.
+Generation Context assembles memory, product intelligence, reference image intelligence when present, reference analysis, design intelligence, and agent workflow prompt items before project generation.
 
-QA should check:
+It currently feeds the generation orchestrator with structured context such as:
 
-- Build compatibility
-- Tests and lint results
-- Visual and UX regressions
-- Missing states
-- Domain specificity
-- Reference anti-copy constraints
-- GitHub export readiness
+- Product brief and priorities
+- Product memory
+- Reference image signals when present
+- Reference analysis
+- Design contract prompt items
+- Agent workflow prompt items
 
-## GitHub Export
+## Optional GitHub Export
 
-GitHub Export packages or publishes generated work into a repository flow.
+GitHub Export is an optional export path after generation. It is not a current agent role and is not part of the deterministic intelligence pipeline.
 
 It should preserve:
 
@@ -140,6 +171,21 @@ It should preserve:
 - Validation results
 - Commit or pull request context
 - Traceability back to product, reference, design, and UX decisions
+
+## Future Roadmap — Not Yet Implemented
+
+The following represents the target architecture and is not yet active:
+
+- Product Manager Agent (LLM-backed)
+- UX Designer Agent (LLM-backed)
+- UI Designer Agent (LLM-backed)
+- Frontend Engineer Agent
+- Backend Engineer Agent
+- QA Engineer Agent
+
+These are documented future components.
+
+They are not currently active in the deterministic workflow.
 
 ## Global Agent Rules
 
