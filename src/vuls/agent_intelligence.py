@@ -1,12 +1,18 @@
+﻿import json
 from enum import StrEnum
-from typing import Any, Literal
+from typing import Any, Literal, Protocol
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from vuls.design_intelligence import DesignContract
+from vuls.llm.gateway import LLMGatewayError
+from vuls.llm.schemas import LLMClientResponse, LLMMessage, LLMRole
 from vuls.product_intelligence import ProductIntelligence
 from vuls.reference_analysis import ReferenceAnalysis
 from vuls.reference_image_intelligence import ReferenceImageAnalysis
+
+AgentExecutionMode = Literal["deterministic", "llm"]
+AgentLLMOutputValue = str | int | float | bool | list[str] | dict[str, str] | None
 
 
 class AgentRole(StrEnum):
@@ -85,6 +91,27 @@ class AgentExecutionContext(BaseModel):
     reference_image_analysis: ReferenceImageAnalysis | None = None
 
 
+class AgentLLMExecutionOptions(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    enabled: bool = False
+    fallback_to_deterministic: bool = True
+
+
+class AgentLLMExecutionOutput(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    summary: str = Field(min_length=1)
+    outputs: dict[str, AgentLLMOutputValue] = Field(default_factory=dict)
+
+
+class AgentLLMExecutionError(RuntimeError):
+    def __init__(self, message: str, *, error_type: str, reason: str) -> None:
+        super().__init__(message)
+        self.error_type = error_type
+        self.reason = reason
+
+
 class AgentExecutionResult(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
@@ -103,6 +130,15 @@ class AgentExecutionResult(BaseModel):
             f"Summary: {self.summary}",
             f"Outputs: {output_keys}.",
         ]
+
+
+class AgentLLMGatewayProtocol(Protocol):
+    def _complete_with_retries(
+        self,
+        *,
+        messages: list[LLMMessage],
+        response_schema: type[BaseModel],
+    ) -> LLMClientResponse: ...
 
 
 class AgentRegistry(BaseModel):
@@ -214,16 +250,46 @@ def execute_agent_workflow(
     results: list[AgentExecutionResult] = []
     for step in workflow.steps:
         agent_registry.get(step.agent_role)
-        if step.agent_role == AgentRole.VULS_ARCHITECT:
-            results.append(_execute_vuls_architect(step, workflow, context))
-        elif step.agent_role == AgentRole.PRODUCT_MANAGER:
-            results.append(_execute_product_manager(step, context))
-        elif step.agent_role == AgentRole.UX_DESIGNER:
-            results.append(_execute_ux_designer(step, context))
-        elif step.agent_role == AgentRole.UI_DESIGNER:
-            results.append(_execute_ui_designer(step, context))
-        else:
-            raise ValueError(f"Unsupported agent role for execution: {step.agent_role.value}")
+        results.append(_execute_deterministic_step(step, workflow, context))
+    return results
+
+
+def execute_agent_workflow_with_llm(
+    workflow: AgentWorkflow,
+    context: AgentExecutionContext,
+    *,
+    llm_gateway: AgentLLMGatewayProtocol | None = None,
+    options: AgentLLMExecutionOptions | None = None,
+    registry: AgentRegistry | None = None,
+) -> list[AgentExecutionResult]:
+    execution_options = options or AgentLLMExecutionOptions()
+    if not execution_options.enabled or llm_gateway is None:
+        return execute_agent_workflow(workflow, context, registry=registry)
+
+    agent_registry = registry or AgentRegistry.default()
+    results: list[AgentExecutionResult] = []
+    for step in workflow.steps:
+        agent = agent_registry.get(step.agent_role)
+        try:
+            results.append(
+                _execute_llm_step(
+                    step=step,
+                    workflow=workflow,
+                    context=context,
+                    agent=agent,
+                    previous_results=results,
+                    llm_gateway=llm_gateway,
+                )
+            )
+        except AgentLLMExecutionError as exc:
+            if not execution_options.fallback_to_deterministic:
+                raise
+            return _execute_deterministic_fallback(
+                workflow=workflow,
+                context=context,
+                registry=agent_registry,
+                error=exc,
+            )
     return results
 
 
@@ -234,6 +300,167 @@ def _agent_role(role: AgentRole | str) -> AgentRole:
         return AgentRole(role)
     except ValueError as exc:
         raise ValueError(f"Unknown agent role: {role}") from exc
+
+
+def _execute_deterministic_step(
+    step: WorkflowStep,
+    workflow: AgentWorkflow,
+    context: AgentExecutionContext,
+) -> AgentExecutionResult:
+    if step.agent_role == AgentRole.VULS_ARCHITECT:
+        return _execute_vuls_architect(step, workflow, context)
+    if step.agent_role == AgentRole.PRODUCT_MANAGER:
+        return _execute_product_manager(step, context)
+    if step.agent_role == AgentRole.UX_DESIGNER:
+        return _execute_ux_designer(step, context)
+    if step.agent_role == AgentRole.UI_DESIGNER:
+        return _execute_ui_designer(step, context)
+    raise ValueError(f"Unsupported agent role for execution: {step.agent_role.value}")
+
+
+def _execute_llm_step(
+    *,
+    step: WorkflowStep,
+    workflow: AgentWorkflow,
+    context: AgentExecutionContext,
+    agent: Agent,
+    previous_results: list[AgentExecutionResult],
+    llm_gateway: AgentLLMGatewayProtocol,
+) -> AgentExecutionResult:
+    messages = _agent_llm_messages(
+        step=step,
+        workflow=workflow,
+        context=context,
+        agent=agent,
+        previous_results=previous_results,
+    )
+    response, llm_output = _complete_agent_llm_output(
+        llm_gateway=llm_gateway,
+        messages=messages,
+    )
+    outputs: dict[str, Any] = dict(llm_output.outputs)
+    outputs["raw_output"] = response.content
+    return AgentExecutionResult(
+        step_order=step.order,
+        agent_role=step.agent_role,
+        agent_name=step.agent_name,
+        summary=llm_output.summary,
+        outputs=outputs,
+        handoff_to=step.handoff_to,
+    )
+
+
+def _complete_agent_llm_output(
+    *,
+    llm_gateway: AgentLLMGatewayProtocol,
+    messages: list[LLMMessage],
+) -> tuple[LLMClientResponse, AgentLLMExecutionOutput]:
+    try:
+        response = llm_gateway._complete_with_retries(
+            messages=messages,
+            response_schema=AgentLLMExecutionOutput,
+        )
+    except LLMGatewayError as exc:
+        raise _agent_llm_execution_error(exc) from exc
+
+    try:
+        llm_output = AgentLLMExecutionOutput.model_validate_json(response.content)
+    except ValidationError as exc:
+        raise _agent_llm_execution_error(exc) from exc
+
+    return response, llm_output
+
+
+def _agent_llm_execution_error(
+    exc: LLMGatewayError | ValidationError,
+) -> AgentLLMExecutionError:
+    return AgentLLMExecutionError(
+        "LLM agent execution failed.",
+        error_type=exc.__class__.__name__,
+        reason=str(exc),
+    )
+
+
+def _execute_deterministic_fallback(
+    *,
+    workflow: AgentWorkflow,
+    context: AgentExecutionContext,
+    registry: AgentRegistry,
+    error: AgentLLMExecutionError,
+) -> list[AgentExecutionResult]:
+    fallback = {
+        "attempted": True,
+        "failed": True,
+        "used": True,
+        "reason": error.reason,
+        "error_type": error.error_type,
+    }
+    return [
+        result.model_copy(
+            update={"outputs": {**result.outputs, "llm_fallback": fallback}}
+        )
+        for result in execute_agent_workflow(workflow, context, registry=registry)
+    ]
+
+
+def _agent_llm_messages(
+    *,
+    step: WorkflowStep,
+    workflow: AgentWorkflow,
+    context: AgentExecutionContext,
+    agent: Agent,
+    previous_results: list[AgentExecutionResult],
+) -> list[LLMMessage]:
+    payload = {
+        "agent": {
+            "id": agent.id,
+            "role": agent.role.value,
+            "name": agent.name,
+            "goal": agent.goal,
+            "responsibilities": agent.responsibilities,
+            "non_goals": agent.non_goals,
+            "response_format": agent.response_format,
+            "guardrails": agent.guardrails,
+        },
+        "workflow": {
+            "summary": workflow.summary,
+            "current_step": {
+                "order": step.order,
+                "task": step.task,
+                "expected_output": step.expected_output,
+                "handoff_to": step.handoff_to.value if step.handoff_to else None,
+            },
+        },
+        "product_intelligence": _product_intelligence_summary(context),
+        "reference_analysis": _reference_analysis_summary(context.reference_analysis),
+        "design_contract": _design_contract_summary(context.design_contract),
+        "Previous agent outputs": [
+            result.model_dump(mode="json") for result in previous_results
+        ],
+        "output_shape": {
+            "summary": "brief agent execution summary",
+            "outputs": {
+                "key": "role-specific structured value compatible with AgentExecutionResult.outputs"
+            },
+        },
+    }
+    return [
+        LLMMessage(
+            role=LLMRole.SYSTEM,
+            content=(
+                "You are executing one Vuls workflow agent. Return only JSON matching "
+                "the requested output shape. Preserve Vuls guardrails and do not change "
+                "API, Supabase, GitHub export, or runtime contracts."
+            ),
+        ),
+        LLMMessage(
+            role=LLMRole.USER,
+            content=(
+                "Execute the current agent step using the provided typed context.\n"
+                f"{json.dumps(payload, ensure_ascii=False, sort_keys=True, indent=2)}"
+            ),
+        ),
+    ]
 
 
 def _execute_vuls_architect(
@@ -410,6 +637,58 @@ def _reference_signal_types(reference_analysis: ReferenceAnalysis) -> list[str]:
     ):
         signal_types.extend(signal.signal_type for signal in signals)
     return _dedupe_strings(signal_types)
+
+
+def _product_intelligence_summary(context: AgentExecutionContext) -> dict[str, Any]:
+    intelligence = context.product_intelligence
+    brief = intelligence.product_brief
+    return {
+        "product_name": brief.product_name,
+        "domain": intelligence.product_memory.domain,
+        "target_audience": brief.target_audience,
+        "value_proposition": brief.value_proposition,
+        "mvp_scope": brief.mvp_scope,
+        "must_have": intelligence.feature_prioritization.must_have,
+        "success_metrics": brief.success_metrics,
+    }
+
+
+def _reference_analysis_summary(reference_analysis: ReferenceAnalysis) -> dict[str, Any]:
+    return {
+        "summary": reference_analysis.summary,
+        "mood_signals": [
+            signal.signal_type for signal in reference_analysis.mood_signals
+        ],
+        "composition_signals": [
+            signal.signal_type for signal in reference_analysis.composition_signals
+        ],
+        "visual_quality_signals": [
+            signal.signal_type for signal in reference_analysis.visual_quality_signals
+        ],
+        "interaction_signals": [
+            signal.signal_type for signal in reference_analysis.interaction_signals
+        ],
+        "platform_signals": [
+            signal.signal_type for signal in reference_analysis.platform_signals
+        ],
+        "negative_constraints": reference_analysis.negative_constraints,
+    }
+
+
+def _design_contract_summary(design_contract: DesignContract) -> dict[str, Any]:
+    return {
+        "domain": design_contract.domain,
+        "platform": design_contract.platform,
+        "visual_archetype": design_contract.visual_archetype.key,
+        "product_emotion": design_contract.product_emotion,
+        "hero_object_strategy": design_contract.hero_object_strategy,
+        "screen_composition": design_contract.screen_composition,
+        "visual_hierarchy": design_contract.visual_hierarchy,
+        "surface_model": design_contract.surface_model,
+        "primary_components": design_contract.component_rules.primary_components,
+        "ux_rules": design_contract.ux_rules,
+        "open_design_prompt": design_contract.open_design_brief.prompt,
+    }
 
 
 def _dedupe_strings(values: list[str]) -> list[str]:
