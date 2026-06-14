@@ -6,6 +6,7 @@ import pytest
 from pydantic import BaseModel
 
 from vuls.agent_intelligence import (
+    AgentCriticResult,
     AgentExecutionContext,
     AgentExecutionResult,
     AgentLLMExecutionError,
@@ -16,6 +17,7 @@ from vuls.agent_intelligence import (
     AgentWorkflow,
     WorkflowStep,
     agent_memory_prompt_items,
+    critic_review_agent_outputs,
     execute_agent_workflow,
     execute_agent_workflow_with_llm,
     plan_agent_workflow,
@@ -207,6 +209,83 @@ def test_execute_agent_workflow_is_deterministic_and_uses_existing_contracts() -
         ui_result.outputs["open_design_prompt"]
         == context.design_contract.open_design_brief.prompt
     )
+
+
+def test_critic_review_agent_outputs_passes_valid_execution_results() -> None:
+    context = _execution_context("I want a CRM for dentistry")
+    workflow = plan_agent_workflow(
+        AgentTask(user_prompt=context.user_prompt, domain="dentistry", platform="web")
+    )
+    execution_results = execute_agent_workflow(workflow, context)
+
+    critic = critic_review_agent_outputs(
+        task=workflow.task,
+        workflow=workflow,
+        execution_results=execution_results,
+    )
+
+    assert isinstance(critic, AgentCriticResult)
+    assert critic.passed is True
+    assert critic.score == 10
+    assert critic.issues == []
+    assert critic.prompt_items()[0] == "Agent Critic: passed with score 10/10."
+
+
+def test_critic_review_agent_outputs_fails_missing_agent_result() -> None:
+    context = _execution_context("I want a CRM for dentistry")
+    workflow = plan_agent_workflow(
+        AgentTask(user_prompt=context.user_prompt, domain="dentistry", platform="web")
+    )
+    execution_results = execute_agent_workflow(workflow, context)[:-1]
+
+    critic = critic_review_agent_outputs(
+        task=workflow.task,
+        workflow=workflow,
+        execution_results=execution_results,
+    )
+
+    assert critic.passed is False
+    assert 0 <= critic.score <= 10
+    assert any(issue.category == "missing_result" for issue in critic.issues)
+    assert any(issue.severity == "error" for issue in critic.issues)
+
+
+def test_critic_review_agent_outputs_fails_empty_outputs() -> None:
+    context = _execution_context("I want a CRM for dentistry")
+    workflow = plan_agent_workflow(
+        AgentTask(user_prompt=context.user_prompt, domain="dentistry", platform="web")
+    )
+    execution_results = execute_agent_workflow(workflow, context)
+    execution_results[1] = execution_results[1].model_copy(update={"outputs": {}})
+
+    critic = critic_review_agent_outputs(
+        task=workflow.task,
+        workflow=workflow,
+        execution_results=execution_results,
+    )
+
+    assert critic.passed is False
+    assert 0 <= critic.score <= 10
+    assert any(issue.category == "empty_outputs" for issue in critic.issues)
+
+
+def test_critic_review_agent_outputs_fails_failed_agent_status() -> None:
+    context = _execution_context("I want a CRM for dentistry")
+    workflow = plan_agent_workflow(
+        AgentTask(user_prompt=context.user_prompt, domain="dentistry", platform="web")
+    )
+    execution_results = execute_agent_workflow(workflow, context)
+    execution_results[0] = execution_results[0].model_copy(update={"status": "failed"})
+
+    critic = critic_review_agent_outputs(
+        task=workflow.task,
+        workflow=workflow,
+        execution_results=execution_results,
+    )
+
+    assert critic.passed is False
+    assert 0 <= critic.score <= 10
+    assert any(issue.category == "failed_status" for issue in critic.issues)
 
 
 def test_execute_agent_workflow_with_llm_defaults_to_deterministic_mode() -> None:

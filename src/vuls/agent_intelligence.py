@@ -1,4 +1,5 @@
 ﻿import json
+import re
 from enum import StrEnum
 from typing import Any, Literal, Protocol
 
@@ -118,7 +119,7 @@ class AgentExecutionResult(BaseModel):
     step_order: int = Field(ge=1)
     agent_role: AgentRole
     agent_name: str = Field(min_length=1)
-    status: Literal["completed"] = "completed"
+    status: Literal["completed", "failed"] = "completed"
     summary: str = Field(min_length=1)
     outputs: dict[str, Any] = Field(default_factory=dict)
     handoff_to: AgentRole | None = None
@@ -130,6 +131,40 @@ class AgentExecutionResult(BaseModel):
             f"Summary: {self.summary}",
             f"Outputs: {output_keys}.",
         ]
+
+
+class AgentCriticIssue(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    severity: Literal["info", "warning", "error"]
+    category: str = Field(min_length=1)
+    message: str = Field(min_length=1)
+    suggested_fix: str | None = None
+
+
+class AgentCriticResult(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    passed: bool
+    score: int = Field(ge=0, le=10)
+    summary: str = Field(min_length=1)
+    issues: list[AgentCriticIssue] = Field(default_factory=list)
+
+    def prompt_items(self) -> list[str]:
+        status = "passed" if self.passed else "failed"
+        items = [
+            f"Agent Critic: {status} with score {self.score}/10.",
+            f"Critic Summary: {self.summary}",
+        ]
+        for issue in self.issues:
+            item = (
+                f"Critic Issue [{issue.severity}/{issue.category}]: "
+                f"{issue.message}"
+            )
+            if issue.suggested_fix is not None:
+                item += f" Suggested fix: {issue.suggested_fix}"
+            items.append(item)
+        return items
 
 
 class AgentLLMGatewayProtocol(Protocol):
@@ -291,6 +326,121 @@ def execute_agent_workflow_with_llm(
                 error=exc,
             )
     return results
+
+
+def critic_review_agent_outputs(
+    *,
+    task: AgentTask,
+    workflow: AgentWorkflow,
+    execution_results: list[AgentExecutionResult],
+) -> AgentCriticResult:
+    issues: list[AgentCriticIssue] = []
+    result_by_step = {
+        (result.step_order, result.agent_role): result for result in execution_results
+    }
+    result_roles = {result.agent_role for result in execution_results}
+
+    for step in workflow.steps:
+        if (step.order, step.agent_role) not in result_by_step:
+            issues.append(
+                AgentCriticIssue(
+                    severity="error",
+                    category="missing_result",
+                    message=(
+                        f"Missing execution result for step {step.order} "
+                        f"({step.agent_role.value})."
+                    ),
+                    suggested_fix="Re-run deterministic agent execution for every workflow step.",
+                )
+            )
+        if step.agent_role not in result_roles:
+            issues.append(
+                AgentCriticIssue(
+                    severity="error",
+                    category="missing_agent",
+                    message=f"Required agent is missing: {step.agent_role.value}.",
+                    suggested_fix="Ensure each workflow role produces one execution result.",
+                )
+            )
+
+    for result in execution_results:
+        if result.status != "completed":
+            issues.append(
+                AgentCriticIssue(
+                    severity="error",
+                    category="failed_status",
+                    message=(
+                        f"{result.agent_name} returned non-completed status: "
+                        f"{result.status}."
+                    ),
+                    suggested_fix="Use deterministic fallback or retry the failed agent step.",
+                )
+            )
+        if not result.summary.strip():
+            issues.append(
+                AgentCriticIssue(
+                    severity="error",
+                    category="empty_summary",
+                    message=f"{result.agent_name} returned an empty summary.",
+                    suggested_fix="Return a concise non-empty handoff summary.",
+                )
+            )
+        if not result.outputs:
+            issues.append(
+                AgentCriticIssue(
+                    severity="error",
+                    category="empty_outputs",
+                    message=f"{result.agent_name} returned no structured outputs.",
+                    suggested_fix="Return role-specific structured outputs for generation.",
+                )
+            )
+            continue
+
+        for key in _required_output_keys(result.agent_role):
+            if key not in result.outputs or _is_empty_output_value(result.outputs[key]):
+                issues.append(
+                    AgentCriticIssue(
+                        severity="error",
+                        category="missing_required_output",
+                        message=(
+                            f"{result.agent_name} is missing required output "
+                            f"'{key}'."
+                        ),
+                        suggested_fix=(
+                            f"Include '{key}' in {result.agent_role.value} outputs."
+                        ),
+                    )
+                )
+
+    intent_tokens = _intent_tokens(task.user_prompt)
+    if intent_tokens and not _outputs_contain_any_token(execution_results, intent_tokens):
+        issues.append(
+            AgentCriticIssue(
+                severity="warning",
+                category="intent_traceability",
+                message="Execution outputs do not visibly preserve the original user intent.",
+                suggested_fix=(
+                    "Include product/domain terms from the user request in agent outputs."
+                ),
+            )
+        )
+
+    score = _critic_score(issues)
+    passed = score >= 7 and not any(issue.severity == "error" for issue in issues)
+    if passed:
+        summary = (
+            f"Agent critic passed {len(execution_results)} execution result(s) "
+            "for generation context."
+        )
+    else:
+        summary = f"Agent critic found {len(issues)} issue(s) in agent execution output."
+
+    return AgentCriticResult(
+        passed=passed,
+        score=score,
+        summary=summary,
+        issues=issues,
+    )
 
 
 def _agent_role(role: AgentRole | str) -> AgentRole:
@@ -700,6 +850,81 @@ def _dedupe_strings(values: list[str]) -> list[str]:
         result.append(value)
         seen.add(value)
     return result
+
+
+def _required_output_keys(role: AgentRole) -> tuple[str, ...]:
+    return {
+        AgentRole.VULS_ARCHITECT: ("workflow", "pipeline", "constraints"),
+        AgentRole.PRODUCT_MANAGER: (
+            "product_name",
+            "domain",
+            "target_users",
+            "mvp_scope",
+            "must_have",
+        ),
+        AgentRole.UX_DESIGNER: (
+            "platform",
+            "primary_journey",
+            "screen_inventory",
+            "ux_rules",
+        ),
+        AgentRole.UI_DESIGNER: (
+            "visual_archetype",
+            "product_emotion",
+            "primary_components",
+            "open_design_prompt",
+        ),
+    }[role]
+
+
+def _is_empty_output_value(value: Any) -> bool:
+    if value is None:
+        return True
+    if isinstance(value, str):
+        return not value.strip()
+    if isinstance(value, (list, tuple, set, dict)):
+        return not value
+    return False
+
+
+def _intent_tokens(user_prompt: str) -> set[str]:
+    stopwords = {
+        "and",
+        "app",
+        "build",
+        "create",
+        "for",
+        "need",
+        "the",
+        "want",
+        "with",
+    }
+    return {
+        token
+        for token in re.findall(r"[\w]+", user_prompt.casefold())
+        if len(token) >= 3 and token not in stopwords
+    }
+
+
+def _outputs_contain_any_token(
+    execution_results: list[AgentExecutionResult],
+    tokens: set[str],
+) -> bool:
+    serialized = json.dumps(
+        [result.model_dump(mode="json") for result in execution_results],
+        ensure_ascii=False,
+    ).casefold()
+    return any(token in serialized for token in tokens)
+
+
+def _critic_score(issues: list[AgentCriticIssue]) -> int:
+    score = 10
+    for issue in issues:
+        if issue.severity == "error":
+            score -= 4
+        elif issue.severity == "warning":
+            score -= 1
+    return max(0, min(10, score))
 
 
 def _vuls_architect_agent() -> Agent:

@@ -2,7 +2,16 @@ import re
 from collections.abc import Mapping
 from typing import Any, Protocol, cast
 
-from vuls.agent_intelligence import AgentTask, AgentWorkflow, plan_agent_workflow
+from vuls.agent_intelligence import (
+    AgentCriticResult,
+    AgentExecutionContext,
+    AgentExecutionResult,
+    AgentTask,
+    AgentWorkflow,
+    critic_review_agent_outputs,
+    execute_agent_workflow,
+    plan_agent_workflow,
+)
 from vuls.api.routes.projects import (
     CreateProjectRequest,
     GenerateProjectRequest,
@@ -371,12 +380,26 @@ def _project_brief_payload(
             platform="telegram_mini_app",
         )
     )
-    agent_workflow = plan_agent_workflow(
-        AgentTask(
+    agent_task = AgentTask(
+        user_prompt=raw_idea,
+        domain=intelligence.product_memory.domain,
+        platform="telegram_mini_app",
+    )
+    agent_workflow = plan_agent_workflow(agent_task)
+    agent_execution = execute_agent_workflow(
+        agent_workflow,
+        AgentExecutionContext(
             user_prompt=raw_idea,
-            domain=intelligence.product_memory.domain,
-            platform="telegram_mini_app",
-        )
+            product_intelligence=intelligence,
+            reference_analysis=reference_analysis,
+            design_contract=design_contract,
+            reference_image_analysis=reference_image_analysis,
+        ),
+    )
+    agent_critic = critic_review_agent_outputs(
+        task=agent_task,
+        workflow=agent_workflow,
+        execution_results=agent_execution,
     )
     payload = {
         "raw_idea": raw_idea,
@@ -386,6 +409,10 @@ def _project_brief_payload(
         "reference_analysis": reference_analysis.model_dump(mode="json"),
         "design_contract": design_contract.model_dump(mode="json"),
         "agent_workflow": agent_workflow.model_dump(mode="json"),
+        "agent_execution": [
+            result.model_dump(mode="json") for result in agent_execution
+        ],
+        "agent_critic": agent_critic.model_dump(mode="json"),
         **intelligence.to_project_brief_payload(),
     }
     if reference_image_analysis is not None:
@@ -413,6 +440,9 @@ def _with_product_memory(
         design_contract_prompt_items(_design_contract_from_project(project))
     )
     project_items.extend(_agent_workflow_from_project(project).prompt_items())
+    for result in _agent_execution_from_project(project):
+        project_items.extend(result.prompt_items())
+    project_items.extend(_agent_critic_from_project(project).prompt_items())
     return augmented
 
 
@@ -442,6 +472,45 @@ def _agent_workflow_from_project(project: Mapping[str, Any]) -> AgentWorkflow:
             domain=intelligence.product_memory.domain,
             platform=_design_platform_from_payload(payload),
         )
+    )
+
+
+def _agent_execution_from_project(project: Mapping[str, Any]) -> list[AgentExecutionResult]:
+    payload = _brief_mapping(project)
+    existing = payload.get("agent_execution")
+    if isinstance(existing, list):
+        return [AgentExecutionResult.model_validate(item) for item in existing]
+
+    return execute_agent_workflow(
+        _agent_workflow_from_project(project),
+        _agent_execution_context_from_project(project),
+    )
+
+
+def _agent_critic_from_project(project: Mapping[str, Any]) -> AgentCriticResult:
+    payload = _brief_mapping(project)
+    existing = payload.get("agent_critic")
+    if isinstance(existing, Mapping):
+        return AgentCriticResult.model_validate(dict(existing))
+
+    workflow = _agent_workflow_from_project(project)
+    return critic_review_agent_outputs(
+        task=workflow.task,
+        workflow=workflow,
+        execution_results=_agent_execution_from_project(project),
+    )
+
+
+def _agent_execution_context_from_project(
+    project: Mapping[str, Any],
+) -> AgentExecutionContext:
+    payload = _brief_mapping(project)
+    return AgentExecutionContext(
+        user_prompt=str(payload.get("raw_idea", project.get("title", "Build a product"))),
+        product_intelligence=_product_intelligence_from_project(project),
+        reference_analysis=_reference_analysis_from_project(project),
+        design_contract=_design_contract_from_project(project),
+        reference_image_analysis=_reference_image_analysis_from_project(project),
     )
 
 

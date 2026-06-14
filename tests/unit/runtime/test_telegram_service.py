@@ -316,6 +316,14 @@ def test_runtime_flow_generates_zip_through_generation_service() -> None:
         "Agent Workflow:" in item
         for item in memory_context["project"]
     )
+    assert any(
+        "Agent Execution:" in item
+        for item in memory_context["project"]
+    )
+    assert any(
+        "Agent Critic:" in item
+        for item in memory_context["project"]
+    )
     reference_index = next(
         index
         for index, item in enumerate(memory_context["project"])
@@ -331,8 +339,19 @@ def test_runtime_flow_generates_zip_through_generation_service() -> None:
         for index, item in enumerate(memory_context["project"])
         if "Agent Workflow:" in item
     )
+    agent_execution_index = next(
+        index
+        for index, item in enumerate(memory_context["project"])
+        if "Agent Execution:" in item
+    )
+    agent_critic_index = next(
+        index
+        for index, item in enumerate(memory_context["project"])
+        if "Agent Critic:" in item
+    )
     assert reference_index < design_index
     assert design_index < agent_workflow_index
+    assert agent_workflow_index < agent_execution_index < agent_critic_index
     assert fakes.project_repository.status_updates == [
         ("project-1", ProjectStatus.GENERATING),
         ("project-1", ProjectStatus.COMPLETED),
@@ -422,6 +441,8 @@ def test_telegram_brief_payload_accepts_optional_reference_image_analysis() -> N
     assert payload["agent_workflow"]["summary"] == (
         "Vuls Architect -> Product Manager -> UX Designer -> UI Designer"
     )
+    assert payload["agent_execution"]
+    assert payload["agent_critic"]["passed"] is True
 
     memory_context = telegram_service_module._with_product_memory(
         project={
@@ -450,12 +471,20 @@ def test_telegram_brief_payload_accepts_optional_reference_image_analysis() -> N
     agent_workflow_index = next(
         index for index, item in enumerate(project_items) if "Agent Workflow:" in item
     )
+    agent_execution_index = next(
+        index for index, item in enumerate(project_items) if "Agent Execution:" in item
+    )
+    agent_critic_index = next(
+        index for index, item in enumerate(project_items) if "Agent Critic:" in item
+    )
     assert (
         product_index
         < reference_image_index
         < reference_index
         < design_index
         < agent_workflow_index
+        < agent_execution_index
+        < agent_critic_index
     )
 
 
