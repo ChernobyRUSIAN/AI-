@@ -64,6 +64,13 @@ from vuls.reference_product_intelligence import (
     load_reference_product_analysis,
     reference_product_analysis_prompt_items,
 )
+from vuls.reference_ux_intelligence import (
+    ReferenceUXAnalysis,
+    ReferenceUXInput,
+    analyze_reference_ux,
+    load_reference_ux_analysis,
+    reference_ux_analysis_prompt_items,
+)
 from vuls.templates.schemas import TemplateSelection
 
 
@@ -370,12 +377,23 @@ def _project_brief_payload(
         reference_image_analysis=reference_image_analysis,
         platform="telegram_mini_app",
     )
+    reference_ux_analysis = _build_reference_ux_analysis(
+        raw_idea=raw_idea,
+        domain=intelligence.product_memory.domain,
+        reference_analysis=reference_analysis,
+        reference_product_analysis=reference_product_analysis,
+        reference_image_analysis=reference_image_analysis,
+        platform="telegram_mini_app",
+    )
     design_contract = build_design_contract(
         DesignInput(
             product_brief=intelligence.product_brief,
             domain=intelligence.product_memory.domain,
             user_prompt=raw_idea,
-            references=_reference_product_design_references(reference_product_analysis),
+            references=[
+                *_reference_product_design_references(reference_product_analysis),
+                *_reference_ux_design_references(reference_ux_analysis),
+            ],
             reference_analysis=reference_analysis,
             platform="telegram_mini_app",
         )
@@ -421,6 +439,8 @@ def _project_brief_payload(
         payload["reference_product_analysis"] = reference_product_analysis.model_dump(
             mode="json"
         )
+    if reference_ux_analysis is not None:
+        payload["reference_ux_analysis"] = reference_ux_analysis.model_dump(mode="json")
     return payload
 
 
@@ -443,6 +463,9 @@ def _with_product_memory(
     reference_product_analysis = _reference_product_analysis_from_project(project)
     if reference_product_analysis is not None:
         project_items.extend(reference_product_analysis_prompt_items(reference_product_analysis))
+    reference_ux_analysis = _reference_ux_analysis_from_project(project)
+    if reference_ux_analysis is not None:
+        project_items.extend(reference_ux_analysis_prompt_items(reference_ux_analysis))
     project_items.extend(
         design_contract_prompt_items(_design_contract_from_project(project))
     )
@@ -483,6 +506,38 @@ def _reference_product_design_references(
     return reference_product_analysis_prompt_items(analysis)
 
 
+def _build_reference_ux_analysis(
+    *,
+    raw_idea: str,
+    domain: str,
+    reference_analysis: ReferenceAnalysis,
+    reference_product_analysis: ReferenceProductAnalysis | None,
+    reference_image_analysis: ReferenceImageAnalysis | None,
+    platform: DesignPlatform,
+) -> ReferenceUXAnalysis | None:
+    if reference_image_analysis is None:
+        return None
+    analysis = analyze_reference_ux(
+        ReferenceUXInput(
+            reference_analysis=reference_analysis,
+            reference_product_analysis=reference_product_analysis,
+            image_analysis=reference_image_analysis,
+            user_intent=raw_idea,
+            domain=domain,
+            platform=platform,
+        )
+    )
+    return None if analysis.primary_goal == "Unknown" else analysis
+
+
+def _reference_ux_design_references(
+    analysis: ReferenceUXAnalysis | None,
+) -> list[str]:
+    if analysis is None:
+        return []
+    return reference_ux_analysis_prompt_items(analysis)
+
+
 def _reference_product_analysis_from_project(
     project: Mapping[str, Any],
 ) -> ReferenceProductAnalysis | None:
@@ -497,18 +552,36 @@ def _reference_product_analysis_from_project(
     )
 
 
+def _reference_ux_analysis_from_project(
+    project: Mapping[str, Any],
+) -> ReferenceUXAnalysis | None:
+    payload = _brief_mapping(project)
+    return load_reference_ux_analysis(
+        payload=payload,
+        reference_analysis=_reference_analysis_from_project(project),
+        reference_product_analysis=_reference_product_analysis_from_project(project),
+        image_analysis=_reference_image_analysis_from_project(project),
+        user_intent=str(payload.get("raw_idea", project.get("title", "Build a product"))),
+        domain=_product_intelligence_from_project(project).product_memory.domain,
+        platform=_design_platform_from_payload(payload),
+    )
+
+
 def _design_contract_from_project(project: Mapping[str, Any]) -> DesignContract:
     payload = _brief_mapping(project)
     intelligence = _product_intelligence_from_project(project)
+    reference_product_analysis = _reference_product_analysis_from_project(project)
+    reference_ux_analysis = _reference_ux_analysis_from_project(project)
     return load_design_contract(
         payload=payload,
         product_brief=intelligence.product_brief,
         domain=intelligence.product_memory.domain,
         user_prompt=str(payload.get("raw_idea", project.get("title", "Build a product"))),
         platform=_design_platform_from_payload(payload),
-        references=_reference_product_design_references(
-            _reference_product_analysis_from_project(project)
-        ),
+        references=[
+            *_reference_product_design_references(reference_product_analysis),
+            *_reference_ux_design_references(reference_ux_analysis),
+        ],
         reference_analysis=_reference_analysis_from_project(project),
     )
 

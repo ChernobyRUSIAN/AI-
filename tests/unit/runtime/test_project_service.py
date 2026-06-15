@@ -693,6 +693,10 @@ def test_project_brief_payload_adds_reference_product_intelligence_to_memory() -
     assert "Documents" in payload["reference_product_analysis"][
         "suggested_product_structure"
     ]
+    assert payload["reference_ux_analysis"]["primary_goal"] == "Manage team knowledge"
+    assert "Reference UX Intelligence:" in " ".join(
+        payload["design_contract"]["open_design_brief"]["inspiration_signals"]
+    )
     memory_context = project_service_module._with_product_memory(
         project={
             "id": "project-1",
@@ -711,10 +715,15 @@ def test_project_brief_payload_adds_reference_product_intelligence_to_memory() -
         for index, item in enumerate(project_items)
         if "Reference Product Intelligence:" in item
     )
+    reference_ux_index = next(
+        index
+        for index, item in enumerate(project_items)
+        if "Reference UX Intelligence:" in item
+    )
     design_index = next(
         index for index, item in enumerate(project_items) if "Design Intelligence:" in item
     )
-    assert reference_index < reference_product_index < design_index
+    assert reference_index < reference_product_index < reference_ux_index < design_index
 
 
 def test_project_brief_payload_without_reference_image_keeps_existing_memory_shape() -> None:
@@ -734,6 +743,7 @@ def test_project_brief_payload_without_reference_image_keeps_existing_memory_sha
 
     assert "reference_image_analysis" not in payload
     assert "reference_product_analysis" not in payload
+    assert "reference_ux_analysis" not in payload
     memory_context = project_service_module._with_product_memory(
         project={
             "id": "project-1",
@@ -745,6 +755,10 @@ def test_project_brief_payload_without_reference_image_keeps_existing_memory_sha
     )
     assert all(
         "Reference Product Intelligence:" not in item
+        for item in memory_context["project"]
+    )
+    assert all(
+        "Reference UX Intelligence:" not in item
         for item in memory_context["project"]
     )
 
