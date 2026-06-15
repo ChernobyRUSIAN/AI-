@@ -65,6 +65,13 @@ from vuls.reference_image_intelligence import (
     load_reference_image_analysis,
     reference_image_analysis_prompt_items,
 )
+from vuls.reference_product_intelligence import (
+    ReferenceProductAnalysis,
+    ReferenceProductInput,
+    analyze_reference_product,
+    load_reference_product_analysis,
+    reference_product_analysis_prompt_items,
+)
 from vuls.templates.schemas import TemplateSelection
 
 
@@ -371,11 +378,19 @@ def _project_brief_payload(
             platform="telegram_mini_app",
         )
     )
+    reference_product_analysis = _build_reference_product_analysis(
+        raw_idea=raw_idea,
+        domain=intelligence.product_memory.domain,
+        reference_analysis=reference_analysis,
+        reference_image_analysis=reference_image_analysis,
+        platform="telegram_mini_app",
+    )
     design_contract = build_design_contract(
         DesignInput(
             product_brief=intelligence.product_brief,
             domain=intelligence.product_memory.domain,
             user_prompt=raw_idea,
+            references=_reference_product_design_references(reference_product_analysis),
             reference_analysis=reference_analysis,
             platform="telegram_mini_app",
         )
@@ -417,6 +432,10 @@ def _project_brief_payload(
     }
     if reference_image_analysis is not None:
         payload["reference_image_analysis"] = reference_image_analysis.model_dump(mode="json")
+    if reference_product_analysis is not None:
+        payload["reference_product_analysis"] = reference_product_analysis.model_dump(
+            mode="json"
+        )
     return payload
 
 
@@ -436,6 +455,9 @@ def _with_product_memory(
     project_items.extend(
         reference_analysis_prompt_items(_reference_analysis_from_project(project))
     )
+    reference_product_analysis = _reference_product_analysis_from_project(project)
+    if reference_product_analysis is not None:
+        project_items.extend(reference_product_analysis_prompt_items(reference_product_analysis))
     project_items.extend(
         design_contract_prompt_items(_design_contract_from_project(project))
     )
@@ -444,6 +466,50 @@ def _with_product_memory(
         project_items.extend(result.prompt_items())
     project_items.extend(_agent_critic_from_project(project).prompt_items())
     return augmented
+
+
+def _build_reference_product_analysis(
+    *,
+    raw_idea: str,
+    domain: str,
+    reference_analysis: ReferenceAnalysis,
+    reference_image_analysis: ReferenceImageAnalysis | None,
+    platform: DesignPlatform,
+) -> ReferenceProductAnalysis | None:
+    if reference_image_analysis is None:
+        return None
+    analysis = analyze_reference_product(
+        ReferenceProductInput(
+            reference_analysis=reference_analysis,
+            image_analysis=reference_image_analysis,
+            user_intent=raw_idea,
+            domain=domain,
+            platform=platform,
+        )
+    )
+    return None if analysis.product_type == "Unknown" else analysis
+
+
+def _reference_product_design_references(
+    analysis: ReferenceProductAnalysis | None,
+) -> list[str]:
+    if analysis is None:
+        return []
+    return reference_product_analysis_prompt_items(analysis)
+
+
+def _reference_product_analysis_from_project(
+    project: Mapping[str, Any],
+) -> ReferenceProductAnalysis | None:
+    payload = _brief_mapping(project)
+    return load_reference_product_analysis(
+        payload=payload,
+        reference_analysis=_reference_analysis_from_project(project),
+        image_analysis=_reference_image_analysis_from_project(project),
+        user_intent=str(payload.get("raw_idea", project.get("title", "Build a product"))),
+        domain=_product_intelligence_from_project(project).product_memory.domain,
+        platform=_design_platform_from_payload(payload),
+    )
 
 
 def _design_contract_from_project(project: Mapping[str, Any]) -> DesignContract:
@@ -455,6 +521,9 @@ def _design_contract_from_project(project: Mapping[str, Any]) -> DesignContract:
         domain=intelligence.product_memory.domain,
         user_prompt=str(payload.get("raw_idea", project.get("title", "Build a product"))),
         platform=_design_platform_from_payload(payload),
+        references=_reference_product_design_references(
+            _reference_product_analysis_from_project(project)
+        ),
         reference_analysis=_reference_analysis_from_project(project),
     )
 

@@ -173,6 +173,39 @@ def analyze_reference_images(image_input: ReferenceImageInput) -> ReferenceImage
             rationale="Image metadata points to dashboards, tables, metrics, or dense cards.",
         )
         _append_if_match(
+            target=composition_signals,
+            text=text,
+            signal_type="saas_workspace_reference",
+            keywords=("saas", "workspace", "teamly", "documents", "team", "billing"),
+            value=(
+                "Reference suggests a SaaS workspace product with documents, team, "
+                "billing, and settings surfaces."
+            ),
+            rationale=(
+                "Image metadata mentions SaaS workspace, documents, team, billing, "
+                "or related workspace navigation."
+            ),
+        )
+        _append_if_match(
+            target=composition_signals,
+            text=text,
+            signal_type="sidebar_navigation_reference",
+            keywords=("sidebar", "left nav", "left navigation", "navigation rail"),
+            value="Reference suggests persistent sidebar or left navigation structure.",
+            rationale="Image metadata mentions sidebar or left navigation.",
+        )
+        _append_if_match(
+            target=quality_signals,
+            text=text,
+            signal_type="workspace_feature_reference",
+            keywords=("documents", "docs", "team members", "billing", "settings", "search"),
+            value=(
+                "Reference includes product feature surfaces such as documents, team "
+                "management, billing, settings, search, or notifications."
+            ),
+            rationale="Image metadata mentions concrete product areas, not only visual style.",
+        )
+        _append_if_match(
             target=density_signals,
             text=text,
             signal_type="low_density_landing",

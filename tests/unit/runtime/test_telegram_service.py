@@ -488,6 +488,99 @@ def test_telegram_brief_payload_accepts_optional_reference_image_analysis() -> N
     )
 
 
+def test_telegram_brief_payload_adds_reference_product_intelligence_to_memory() -> None:
+    image_analysis = analyze_reference_images(
+        ReferenceImageInput(
+            images=[
+                ReferenceImageItem(
+                    filename="teamly-workspace.png",
+                    mime_type="image/png",
+                    width=1440,
+                    height=900,
+                    size_bytes=420_000,
+                    caption=(
+                        "Teamly SaaS workspace dashboard with sidebar navigation, "
+                        "documents, team members, billing, settings, search, and notifications."
+                    ),
+                    tags=["saas", "workspace", "documents", "team", "billing", "settings"],
+                )
+            ]
+        )
+    )
+
+    payload = telegram_service_module._project_brief_payload(
+        raw_idea="Use this Teamly screenshot as product reference",
+        brief=ProjectBrief(
+            title="Workspace Platform",
+            goal="Use this Teamly screenshot as product reference",
+            target_users=["team owner"],
+            must_have_features=["workspace"],
+            language_code="en",
+        ),
+        selection=FakeTemplateRegistry().select_template("Workspace platform"),
+        reference_image_analysis=image_analysis,
+    )
+
+    assert payload["reference_product_analysis"]["product_type"] == "SaaS Workspace"
+    assert "Team Members" in payload["reference_product_analysis"][
+        "suggested_product_structure"
+    ]
+    memory_context = telegram_service_module._with_product_memory(
+        project={
+            "id": "project-1",
+            "title": "Workspace Platform",
+            "selected_template_key": "crm",
+            "brief": payload,
+        },
+        memory_context={},
+    )
+    project_items = memory_context["project"]
+    reference_index = next(
+        index for index, item in enumerate(project_items) if "Reference Analysis:" in item
+    )
+    reference_product_index = next(
+        index
+        for index, item in enumerate(project_items)
+        if "Reference Product Intelligence:" in item
+    )
+    design_index = next(
+        index for index, item in enumerate(project_items) if "Design Intelligence:" in item
+    )
+    assert reference_index < reference_product_index < design_index
+
+
+def test_telegram_brief_payload_without_reference_image_keeps_existing_memory_shape() -> None:
+    payload = telegram_service_module._project_brief_payload(
+        raw_idea="Create a fitness app for trainers",
+        brief=ProjectBrief(
+            title="Trainer Fitness App",
+            goal="Create a fitness app for trainers",
+            target_users=["trainers"],
+            must_have_features=["workouts"],
+            language_code="en",
+        ),
+        selection=FakeTemplateRegistry().select_template(
+            "Create a fitness app for trainers"
+        ),
+    )
+
+    assert "reference_image_analysis" not in payload
+    assert "reference_product_analysis" not in payload
+    memory_context = telegram_service_module._with_product_memory(
+        project={
+            "id": "project-1",
+            "title": "Trainer Fitness App",
+            "selected_template_key": "crm",
+            "brief": payload,
+        },
+        memory_context={},
+    )
+    assert all(
+        "Reference Product Intelligence:" not in item
+        for item in memory_context["project"]
+    )
+
+
 @dataclass(frozen=True)
 class ServiceFakes:
     user_repository: FakeUserRepository
